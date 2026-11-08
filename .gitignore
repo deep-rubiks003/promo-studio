@@ -23,6 +23,7 @@ __pycache__/
 .coverage
 htmlcov/
 .test-runs/
+.test-runtime/
 build/
 dist/
 *.egg-info/

@@ -13,7 +13,7 @@ jobs:
         python: ['3.11', '3.13']
     runs-on: ${{ matrix.os }}
     env:
-      PROMO_STUDIO_DATA: ${{ runner.temp }}/promo-studio-ci
+      PROMO_STUDIO_DATA: .test-runtime
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
