@@ -1,0 +1,34 @@
+# Local secrets and runtime/user material
+.env
+.env.*
+*.env
+data/
+uploads/
+raw_outputs/
+exports/
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.sqlite-*
+*.db
+*.log
+*.bak
+
+# Python and test/build environments
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.test-runs/
+build/
+dist/
+*.egg-info/
+
+# Editors and local OS metadata
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

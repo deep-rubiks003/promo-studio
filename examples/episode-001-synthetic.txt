@@ -1,0 +1,30 @@
+EPISODE NUMBER: Episode 1
+EPISODE LOGLINE: A courier discovers a message hidden in a delivery meant for someone who disappeared.
+
+**MAYA:**
+Start: (00:00.00) | End: (00:05.00)
+"This parcel has my name on it. I never ordered anything."
+**LEO:**
+Start: (00:05.00) | End: (00:10.00)
+"The sender disappeared three years ago."
+**MAYA:**
+Start: (00:10.00) | End: (00:15.00)
+"Then who signed the delivery receipt this morning?"
+**ACTION:**
+Start: (00:15.00) | End: (00:18.00)
+Maya opens the parcel. Inside is a key and an unopened letter.
+**LEO:**
+Start: (00:18.00) | End: (00:24.00)
+"That key opens the room your father told us never to enter."
+**MAYA:**
+Start: (00:24.00) | End: (00:30.00)
+"He said there was nothing left in that room."
+**SOUND:**
+Start: (00:30.00) | End: (00:32.00)
+Three knocks come from behind the locked door.
+**MAYA:**
+Start: (00:32.00) | End: (00:37.00)
+"Leo, tell me you heard that too."
+**ACTION:**
+Start: (00:37.00) | End: (00:40.00)
+The handle begins turning from the inside.

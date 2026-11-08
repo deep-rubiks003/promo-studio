@@ -1,0 +1,486 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Promo Studio — Cinematic Screenplay to Story</title>
+  <link rel="stylesheet" href="/static/styles.css?v=discovery-20261108">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to cut room</a>
+
+  <!-- Global SVG Icon Sprites -->
+  <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <!-- Film Slate / Clapperboard Brand Mark -->
+      <symbol id="i-mark" viewBox="0 0 24 24">
+        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+        <path d="m2 8 20 0"/>
+        <path d="m6 4 3 4"/>
+        <path d="m11 4 3 4"/>
+        <path d="m16 4 3 4"/>
+      </symbol>
+
+      <!-- Upload Cloud / Script File Icon -->
+      <symbol id="i-upload" viewBox="0 0 24 24">
+        <path d="M12 15V3m0 0L7 8m5-5 5 5"/>
+        <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
+      </symbol>
+
+      <!-- Check Circle -->
+      <symbol id="i-check" viewBox="0 0 24 24">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+        <polyline points="22 4 12 14.01 9 11.01"/>
+      </symbol>
+
+      <!-- Alert / Warning Triangle -->
+      <symbol id="i-alert" viewBox="0 0 24 24">
+        <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </symbol>
+
+      <!-- Sparkle / AI Copilot -->
+      <symbol id="i-sparkle" viewBox="0 0 24 24">
+        <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3z"/>
+      </symbol>
+    </defs>
+  </svg>
+
+  <!-- Topbar Header -->
+  <header class="topbar">
+    <a href="#" class="brand" id="home">
+      <svg class="icon mark"><use href="#i-mark"/></svg>
+      promo<span>studio</span>
+    </a>
+    <span class="project-name" id="project-name">New project</span>
+    
+    <div class="header-actions">
+      <label class="visually-hidden" for="project-picker">Saved projects</label>
+      <select id="project-picker">
+        <option value="">Saved projects</option>
+      </select>
+      <button class="quiet" id="new-project">New project</button>
+      <button class="button secondary" id="connection">Connect Gemini</button>
+    </div>
+  </header>
+
+  <!-- Workflow Stepper Nav -->
+  <nav class="flow" aria-label="Workflow">
+    <button data-step="0" aria-current="step"><span>1</span>Import</button>
+    <i></i>
+    <button data-step="1" disabled><span>2</span>Episodes</button>
+    <i></i>
+    <button data-step="2" disabled><span>3</span>Brief</button>
+    <i></i>
+    <button data-step="3" disabled><span>4</span>Drafts</button>
+    <div class="flow-note" id="connection-status">Checking connection…</div>
+  </nav>
+
+  <!-- Live Job & Activity Banners -->
+  <div class="activity job-activity" id="activity" role="status" aria-live="polite" hidden>
+    <div>
+      <strong id="activity-message">Working…</strong>
+      <p id="activity-detail" class="small">Completed drafts stay saved.</p>
+    </div>
+    <button id="stop-job" type="button" class="button secondary" hidden>Stop generation</button>
+  </div>
+
+  <section id="recovery-notice" class="activity" hidden>
+    <strong id="recovery-message"></strong>
+    <p class="small">Completed work is saved. Resume explicitly when you are ready; nothing restarts automatically.</p>
+    <button id="recovery-output" class="button secondary">Open saved work</button>
+    <button id="dismiss-recovery" class="quiet">Dismiss</button>
+  </section>
+
+  <div class="global-error" id="global-error" role="alert" hidden>
+    <p id="global-error-message"></p>
+    <button class="quiet" id="retry">Retry</button>
+    <button class="quiet" id="dismiss-error">Dismiss</button>
+  </div>
+
+  <section id="pending-work" class="activity" hidden aria-label="Saved generation">
+    <p id="pending-description">A saved generation is available. Resume its checks without regenerating completed work.</p>
+    <button id="view-saved-output" type="button" class="button primary">View saved output</button>
+    <button id="resume-pending" class="button secondary">Resume saved draft</button>
+  </section>
+
+  <!-- Main Viewports -->
+  <main id="main" tabindex="-1">
+<div class="studio-modes" aria-label="Creative workflow"><button id="manual-mode" type="button" class="quiet" aria-pressed="true">Make promos from chosen episodes</button><button id="discovery-mode" type="button" class="quiet" aria-pressed="false" disabled>Find promos across the show</button></div>
+    
+    <!-- STEP 0: Import Screen -->
+    <section id="step-0" class="screen import-screen" aria-labelledby="import-title">
+      <div class="import-main">
+        <h1 id="import-title">A whole show.<br>Find the moment to hook them.</h1>
+        <p class="intro">Start with your screenplays. Find the story.<br>Shape the moment they can’t leave.</p>
+
+        <form id="upload-form">
+          <label class="project-label" for="upload-name">
+            Project name
+            <input id="upload-name" maxlength="120" placeholder="Name your show" required>
+          </label>
+
+          <div class="dropzone" id="dropzone">
+            <svg class="icon upload-icon"><use href="#i-upload"/></svg>
+            <h2>Drop your episode scripts</h2>
+            <p>Import your scripts, then choose which episodes to send.</p>
+            <button type="button" class="button primary" id="choose-files">Choose screenplays</button>
+            <input id="files" type="file" multiple accept=".txt,text/plain" class="visually-hidden" tabindex="-1">
+            <span class="small">Timestamped TXT files · Multiple episodes</span>
+          </div>
+
+          <div id="upload-feedback" aria-live="polite"></div>
+          <ul id="pending-files" class="pending-files"></ul>
+          <button type="submit" class="button primary" id="import-project" disabled>Import screenplays</button>
+        </form>
+
+        <p class="prototype-note">Scripts are saved locally. Analysis and creation send screenplay text to Gemini using your connection.</p>
+      </div>
+
+      <aside class="story-preview" aria-label="How source cuts work">
+        <div class="preview-top">
+          <span>Your source, kept intact</span>
+          <span>Screenplay to Promo</span>
+        </div>
+        <div class="script-cover">
+          <span class="cover-rule"></span>
+          <h2>The story<br>starts here.</h2>
+          <p>Your chosen episodes for context.<br>A precise selection for the cut.</p>
+          <span class="cover-credit">20–60 seconds · One draft per episode or group</span>
+        </div>
+        <div class="sample-dialogue">
+          <p>Original dialogue.<br>Traceable source moments.<br>An ending that leaves a question.</p>
+          <div class="dialogue-bottom">
+            <span>Screenplay first</span>
+            <span>Footage review required</span>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- STEP 1: Episodes Screen -->
+    <section id="step-1" class="screen setup-screen" hidden aria-labelledby="episodes-title">
+      <div class="page-title">
+        <div>
+          <h1 id="episodes-title">Choose your episodes.</h1>
+          <p>Episode numbers and loglines, extracted directly from your TXT files.</p>
+        </div>
+        <span class="sample-label">Local extraction · No AI</span>
+      </div>
+
+      <div class="episode-toolbar">
+        <label class="checkbox">
+          <input id="select-all" type="checkbox">
+          All episodes
+        </label>
+        <span id="selected-count">0 selected</span>
+        <div class="range-pick">
+          <label for="range-from">Range</label>
+          <select id="range-from" aria-label="First episode"></select>
+          <span>to</span>
+          <select id="range-to" aria-label="Last episode"></select>
+          <button class="quiet" id="apply-range">Apply</button>
+        </div>
+      </div>
+
+      <div id="episode-list" class="episode-list"></div>
+
+      <div class="episode-next">
+        <p class="small">Nothing is sent to Gemini until you create a draft.</p>
+        <button id="choose-promos" class="button primary">Choose promo options</button>
+      </div>
+    </section>
+
+    <!-- STEP 2: Brief & Direct Screen -->
+    <section id="step-2" class="screen direct-screen" hidden aria-labelledby="direct-title">
+      <div class="page-title">
+        <div>
+          <h1 id="direct-title">Set the brief.</h1>
+          <p>One source pool or several. One focused draft for each.</p>
+        </div>
+        <button class="quiet" id="change-episodes">Change episodes</button>
+      </div>
+
+      <div class="direct-layout">
+        <div class="episode-area">
+          <h2 id="source-count"></h2>
+          <div id="selected-preview"></div>
+          
+          <section id="group-assignment" hidden>
+            <h2>Group your episodes</h2>
+            <p class="small">Give episodes the same group name to make one promo together. Each episode belongs to one group.</p>
+            <div id="assignment-list"></div>
+          </section>
+        </div>
+
+        <form class="brief" id="brief-form">
+          <h2>Promo options</h2>
+
+          <label>
+            What would you like to create?
+            <select id="promo-mode">
+              <option value="single">One promo from selected episodes</option>
+              <option value="multiple">Multiple promos</option>
+            </select>
+          </label>
+
+          <label id="grouping-field" hidden>
+            Make multiple promos by
+            <select id="grouping-mode">
+              <option value="episode">One promo per episode</option>
+              <option value="custom">Grouping episodes together</option>
+            </select>
+          </label>
+
+          <label>
+            Creative emphasis
+            <input id="emphasis" placeholder="Automatic, or describe a direction" maxlength="500">
+          </label>
+
+          <fieldset class="duration-inputs">
+            <legend>Duration per promo</legend>
+            <label>Min <input id="min-duration" type="number" min="20" max="60" value="20" required> s</label>
+            <span>—</span>
+            <label>Max <input id="max-duration" type="number" min="20" max="60" value="60" required> s</label>
+          </fieldset>
+
+          <label>
+            Cut structure
+            <select id="structure">
+              <option value="continuous">Continuous</option>
+              <option value="stitched">Stitched</option>
+            </select>
+          </label>
+          <p class="small" id="structure-note">One uninterrupted source sequence.</p>
+
+          <div class="brief-total">
+            <strong id="brief-total"></strong>
+            <span id="mode-note"></span>
+          </div>
+
+          <p id="brief-error" class="error" role="alert"></p>
+          <button class="button primary" id="generate" type="submit">Create draft</button>
+          <p class="small">Uses Gemini only for the chosen episodes. Every promo gets one draft.</p>
+        </form>
+      </div>
+    </section>
+
+    <!-- STEP 3: Studio / Cut Room Screen -->
+    <section id="step-3" class="screen studio-screen" hidden aria-labelledby="studio-title">
+      <div id="saved-output-notice" class="saved-output-notice" hidden role="status"></div>
+
+      <div class="studio-heading">
+        <div>
+          <h1 id="studio-title">The cut room.</h1>
+          <span id="studio-source"></span>
+        </div>
+        <div class="studio-actions">
+          <label class="group-picker">
+            <span>Promo</span>
+            <select id="group-select"></select>
+          </label>
+          <a class="button secondary" id="export" href="#" download>Download all cuts · PDF</a>
+          <a class="button secondary" id="handoff-export" href="#" download>Print handoff</a>
+          <a class="quiet" id="json-export" href="#" download>Source data</a>
+        </div>
+      </div>
+
+      <div id="studio-empty" class="empty-state" hidden>
+        <h2>No eligible cuts yet.</h2>
+        <p>Choose your episodes and brief to create one draft per promo.</p>
+        <button class="button secondary" id="adjust-brief">Adjust the brief</button>
+      </div>
+
+      <section class="spoiler-section" aria-labelledby="spoiler-title">
+        <div class="spoiler-heading">
+          <h2 id="spoiler-title">Spoiler checker · All final promos</h2>
+          <button type="button" id="check-spoilers" class="button secondary">Spoiler checker</button>
+        </div>
+        <p class="small" id="spoiler-help">Optional AI review after drafting. One batch call checks every final promo against its assigned episodes. Findings below follow the promo you select.</p>
+        <div id="spoiler-result" role="status" aria-live="polite"></div>
+      </section>
+
+      <div id="angle-tabs" class="angle-tabs" role="tablist" aria-label="Earlier draft versions"></div>
+
+      <div id="variation-panel" role="tabpanel" tabindex="0">
+        <div class="studio-body">
+          <article class="cut-workspace" aria-label="Active promo draft">
+            <div class="cut-top">
+              <div>
+                <h2 id="cut-title"></h2>
+                <p id="angle-purpose"></p>
+              </div>
+              <div class="cut-duration">
+                <strong id="cut-duration"></strong>
+                <span id="cut-mode"></span>
+              </div>
+            </div>
+
+            <p class="eligibility" id="eligibility"></p>
+            <p id="batch-summary" class="small"></p>
+            <button id="repair-current" class="button secondary" type="button" hidden>Repair this promo</button>
+
+            <!-- NLE Timeline Visualization -->
+            <div id="source-timeline" class="source-timeline" aria-label="Ordered source cuts"></div>
+
+            <div class="sequence-header">
+              <span>Story sequence</span>
+              <span>Exact source text · Script timecodes</span>
+            </div>
+
+            <div id="story-beats" class="story-beats"></div>
+
+            <section class="ending-question">
+              <h2>Leave them with this.</h2>
+              <p class="beat-question" id="unanswered-question"></p>
+            </section>
+          </article>
+
+          <!-- Right Column: Inspector & Editorial Read -->
+          <aside class="inspector" aria-label="Review and validation">
+            <div class="potential">
+              <div>
+                <h2>Virality Review</h2>
+                <button class="info-button" id="score-info" aria-expanded="false" aria-controls="score-explanation" aria-label="Explain editorial score">
+                  <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></svg>
+                </button>
+              </div>
+              <button type="button" id="run-virality-review" class="button secondary">Run Virality Review</button>
+              <strong id="potential-score"></strong>
+              <p id="score-state" class="small"></p>
+              <p class="small">Editorial potential / 100 · Not audience prediction</p>
+              <p id="score-explanation" class="score-explanation" hidden>Weighted assessment of hook, standalone clarity, escalation, cliffhanger and cut quality. Model judgement is not measured audience response. Failed source checks make a cut ineligible regardless of its score.</p>
+            </div>
+
+            <div class="rubric" id="rubric"></div>
+
+            <div class="validation">
+              <h2>Cut checks <span id="checks-count"></span></h2>
+              <div id="checks"></div>
+              <p class="footage-note">Script boundaries checked.<br>Footage & audio sync unverified.</p>
+            </div>
+
+            <div class="review-concern">
+              <h3>Editor’s note</h3>
+              <p id="group-opportunity" class="opportunity"></p>
+              <p id="editor-note"></p>
+              <div id="cut-warnings"></div>
+            </div>
+          </aside>
+        </div>
+
+        <!-- Refinement Section -->
+        <section class="refine" aria-labelledby="refine-title">
+          <div class="refine-heading">
+            <h2 id="refine-title">Shape this version</h2>
+            <span>Re-select source moments. Keep the dialogue.</span>
+          </div>
+
+          <form id="refine-form" class="prompt-composer">
+            <label class="target-picker">
+              <span class="visually-hidden">Part to refine</span>
+              <select id="refine-target">
+                <option>Whole promo</option>
+                <option>Hook</option>
+                <option>Context</option>
+                <option>Escalation</option>
+                <option>Cliffhanger</option>
+              </select>
+            </label>
+
+            <label class="prompt-input">
+              <span class="visually-hidden">Refinement prompt</span>
+              <input id="prompt" placeholder="e.g. Find a stronger opening" autocomplete="off" maxlength="2000" required>
+            </label>
+
+            <button class="button primary" type="submit" id="propose">Suggest a cut</button>
+          </form>
+
+          <div class="prompt-presets">
+            <span>Try a direction</span>
+            <button data-prompt="Make it more romantic">More romantic</button>
+            <button data-prompt="Find a stronger opening">Stronger hook</button>
+            <button data-prompt="Leave a stronger unanswered question">Stronger cliffhanger</button>
+          </div>
+
+          <p id="prompt-error" class="error" role="alert"></p>
+          <div id="proposal" class="proposal" hidden></div>
+          <p class="refine-disclaimer">Suggestions receive local cut checks before you apply them. Virality Review is optional. Your current version stays in place until then.</p>
+        </section>
+      </div>
+    </section>
+
+  <section id="step-4" class="screen discovery-screen" hidden aria-labelledby="discovery-title">
+<div class="page-title"><div><h1 id="discovery-title">Find promos across the show.</h1><p>Scan your source, compare story opportunities, then review a ranked shortlist.</p></div><button class="quiet" id="discovery-back" type="button">Return to manual workflow</button></div>
+<div class="discovery-layout"><form id="discovery-form" class="brief discovery-brief"><h2>Discovery brief</h2>
+<label>Source scope<select id="discovery-scope"><option value="all">All uploaded episodes</option><option value="selected">Only episodes selected in Episodes</option></select></label><p id="discovery-scope-summary" class="small"></p>
+<label>Cut structure<select id="discovery-structure"><option value="either">Either · Prefer continuous</option><option value="continuous">Continuous only</option><option value="stitched">Stitched only</option></select></label><p class="small">Continuous cuts keep one sequence intact. Stitched cuts can connect source moments.</p>
+<label>Shortlist size<select id="discovery-quantity"><option value="auto">Recommended shortlist</option><option value="cap">Up to a number I choose</option></select></label><label id="discovery-limit-field" hidden>Maximum promos<input id="discovery-limit" type="number" min="1" max="30" value="10"></label><p class="small">Only qualifying cuts make the shortlist. A maximum is not a promise.</p>
+<fieldset class="duration-inputs"><legend>Duration per promo</legend><label>Min <input id="discovery-min" type="number" min="20" max="60" value="20" required> s</label><span>—</span><label>Max <input id="discovery-max" type="number" min="20" max="60" value="60" required> s</label></fieldset>
+<label>Creative emphasis<input id="discovery-emphasis" maxlength="500" placeholder="Automatic, or describe a direction"></label>
+<button class="button secondary" id="preview-discovery" type="submit">Preview scan & cost</button><p class="small">Preview is local. It makes no model requests.</p><p id="discovery-error" class="error" role="alert"></p>
+<section id="discovery-preview" class="discovery-preview" hidden aria-labelledby="discovery-preview-title"><h3 id="discovery-preview-title">Planned scan</h3><div id="discovery-preview-details"></div><p id="discovery-budget-warning" class="discovery-budget-warning" role="status"></p><p class="small">Estimates are conservative. Actual spend depends on source length and results. The optional batch spoiler check is additional. The session spending limit remains enforced; a stopped run may have incomplete coverage.</p><button class="button primary" id="start-discovery" type="button">Start discovery</button><p class="small">Start sends the scoped screenplays to Gemini.</p></section>
+</form><div class="discovery-results"><section aria-labelledby="discovery-history-title"><h2 id="discovery-history-title">Saved discovery runs</h2><p class="small">Open reports and saved cuts without a key. Resuming a run uses Gemini.</p><div id="discovery-history"></div></section><section id="discovery-run-report" class="discovery-run-report" hidden aria-labelledby="discovery-report-title"><h2 id="discovery-report-title">Run report</h2><div id="discovery-report-body"></div></section></div></div>
+</section>
+
+</main>
+
+  <!-- App Footer -->
+  <footer class="app-footer">
+    <span id="budget-status">Local studio · Connecting…</span>
+    <span>Screenplay in. Story out.</span>
+  </footer>
+
+  <!-- Connect Modal Dialog -->
+  <dialog id="connect-dialog" aria-labelledby="connect-title">
+    <form id="connect-form">
+      <div class="dialog-heading">
+        <h2 id="connect-title">Connect your Gemini key</h2>
+        <button type="button" class="quiet" id="close-connect" aria-label="Close connection settings">Close</button>
+      </div>
+      <p class="small">Enter your key privately here. It stays in the local server’s memory for this session and is never stored in the project or export.</p>
+      
+      <label>
+        API key
+        <input id="api-key" type="password" autocomplete="off" spellcheck="false" required>
+      </label>
+
+      <label>
+        Model
+        <select id="model" required>
+          <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite · Recommended</option>
+          <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite · Lower cost</option>
+          <option value="gemini-3.8-flash">Gemini 3.8 Flash · Original</option>
+        </select>
+      </label>
+
+      <p class="small">The model must be available to your key. There is no automatic model substitution.</p>
+
+      <label>
+        Session spending limit (USD)
+        <input type="number" id="budget" value="2" min="0.01" max="2" step="0.01" required>
+      </label>
+
+      <p id="connect-error" class="error" role="alert"></p>
+      <button class="button primary" type="submit" id="save-connect">Connect & validate</button>
+    </form>
+  </dialog>
+
+  <!-- Replace Warning Modal Dialog -->
+  <dialog id="replace-dialog" aria-labelledby="replace-title">
+    <h2 id="replace-title">Replace the current cuts?</h2>
+    <p>Successful generation will replace this project’s current promo drafts and pending suggestions. If it fails, the current cuts stay intact. Export them first if you want to keep a copy.</p>
+    <div class="dialog-actions">
+      <button class="button secondary" id="cancel-replace">Keep current cuts</button>
+      <button class="button primary" id="confirm-replace">Generate new cuts</button>
+    </div>
+  </dialog>
+
+  <noscript>
+    <p class="global-error">Enable JavaScript to import scripts and use this local studio.</p>
+  </noscript>
+  <script src="/static/app.js?v=discovery-20261108" defer></script>
+</body>
+</html>
