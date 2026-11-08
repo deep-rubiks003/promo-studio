@@ -37,7 +37,10 @@ def sample_project(long=False):
 
 def extracted(data):
     with fitz.open(stream=data, filetype='pdf') as document:
-        return '\n'.join(page.get_text() for page in document)
+        # System fonts can wrap the same words differently on Windows/Linux.
+        # Content assertions ignore layout whitespace; geometry tests below
+        # independently retain strict bounds and pagination checks.
+        return '\n'.join(' '.join(page.get_text().split()) for page in document)
 
 
 def test_pdf_contains_every_draft_original_dialogue_checks_and_honest_states():
