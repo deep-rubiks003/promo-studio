@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Promo Studio — Cinematic Screenplay to Story</title>
-  <link rel="stylesheet" href="/static/styles.css?v=discovery-20261108">
+  <link rel="stylesheet" href="/static/styles.css?v=fullshow-amber-20261109">
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to cut room</a>
@@ -108,7 +108,7 @@
 
   <!-- Main Viewports -->
   <main id="main" tabindex="-1">
-<div class="studio-modes" aria-label="Creative workflow"><button id="manual-mode" type="button" class="quiet" aria-pressed="true">Make promos from chosen episodes</button><button id="discovery-mode" type="button" class="quiet" aria-pressed="false" disabled>Find promos across the show</button></div>
+<div class="studio-modes" hidden aria-label="Creative workflow"><button id="manual-mode" type="button" class="quiet" aria-pressed="true">Make promos from chosen episodes</button><button id="discovery-mode" type="button" class="quiet" aria-pressed="false" disabled>Find promos across the show</button></div>
     
     <!-- STEP 0: Import Screen -->
     <section id="step-0" class="screen import-screen" aria-labelledby="import-title">
@@ -281,12 +281,13 @@
             <span>Promo</span>
             <select id="group-select"></select>
           </label>
-          <a class="button secondary" id="export" href="#" download>Download all cuts · PDF</a>
+          <button id="repair-failed" class="button secondary" type="button" hidden>Repair failed promos</button><button id="review-pending-repairs" class="quiet" type="button" hidden>Review saved repairs</button><a class="button secondary" id="export" href="#" download>Download all cuts · PDF</a>
           <a class="button secondary" id="handoff-export" href="#" download>Print handoff</a>
           <a class="quiet" id="json-export" href="#" download>Source data</a>
         </div>
       </div>
 
+      <section id="live-episode-progress" class="live-episode-progress" hidden tabindex="-1" aria-labelledby="live-progress-title"><div class="live-progress-heading"><div><span class="eyebrow">Full-show scan</span><h2 id="live-progress-title">Your episodes, coming to life.</h2></div><strong id="live-progress-count" role="status" aria-live="polite"></strong></div><div class="scan-progress-track"><div id="live-progress-fill"></div></div><div id="live-episode-map" class="discovery-episode-map" aria-label="Live episode progress"></div><p class="small">Green: source scan complete · Amber: processing · Red: source window failed. Cut quality is shown separately below.</p></section>
       <div id="studio-empty" class="empty-state" hidden>
         <h2>No eligible cuts yet.</h2>
         <p>Choose your episodes and brief to create one draft per promo.</p>
@@ -320,7 +321,7 @@
 
             <p class="eligibility" id="eligibility"></p>
             <p id="batch-summary" class="small"></p>
-            <button id="repair-current" class="button secondary" type="button" hidden>Repair this promo</button>
+            <button id="repair-current" class="button repair-action" type="button" hidden>Repair this promo</button>
 
             <!-- NLE Timeline Visualization -->
             <div id="source-timeline" class="source-timeline" aria-label="Ordered source cuts"></div>
@@ -342,13 +343,12 @@
           <aside class="inspector" aria-label="Review and validation">
             <div class="potential">
               <div>
-                <h2>Virality Review</h2>
+                <h2>Editorial read</h2>
                 <button class="info-button" id="score-info" aria-expanded="false" aria-controls="score-explanation" aria-label="Explain editorial score">
                   <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/></svg>
                 </button>
               </div>
-              <button type="button" id="run-virality-review" class="button secondary">Run Virality Review</button>
-              <strong id="potential-score"></strong>
+              <button type="button" id="run-virality-review" class="button secondary">Run Virality Review</button><strong id="potential-score"></strong>
               <p id="score-state" class="small"></p>
               <p class="small">Editorial potential / 100 · Not audience prediction</p>
               <p id="score-explanation" class="score-explanation" hidden>Weighted assessment of hook, standalone clarity, escalation, cliffhanger and cut quality. Model judgement is not measured audience response. Failed source checks make a cut ineligible regardless of its score.</p>
@@ -413,18 +413,11 @@
     </section>
 
   <section id="step-4" class="screen discovery-screen" hidden aria-labelledby="discovery-title">
-<div class="page-title"><div><h1 id="discovery-title">Find promos across the show.</h1><p>Scan your source, compare story opportunities, then review a ranked shortlist.</p></div><button class="quiet" id="discovery-back" type="button">Return to manual workflow</button></div>
-<div class="discovery-layout"><form id="discovery-form" class="brief discovery-brief"><h2>Discovery brief</h2>
-<label>Source scope<select id="discovery-scope"><option value="all">All uploaded episodes</option><option value="selected">Only episodes selected in Episodes</option></select></label><p id="discovery-scope-summary" class="small"></p>
-<label>Cut structure<select id="discovery-structure"><option value="either">Either · Prefer continuous</option><option value="continuous">Continuous only</option><option value="stitched">Stitched only</option></select></label><p class="small">Continuous cuts keep one sequence intact. Stitched cuts can connect source moments.</p>
-<label>Shortlist size<select id="discovery-quantity"><option value="auto">Recommended shortlist</option><option value="cap">Up to a number I choose</option></select></label><label id="discovery-limit-field" hidden>Maximum promos<input id="discovery-limit" type="number" min="1" max="30" value="10"></label><p class="small">Only qualifying cuts make the shortlist. A maximum is not a promise.</p>
-<fieldset class="duration-inputs"><legend>Duration per promo</legend><label>Min <input id="discovery-min" type="number" min="20" max="60" value="20" required> s</label><span>—</span><label>Max <input id="discovery-max" type="number" min="20" max="60" value="60" required> s</label></fieldset>
-<label>Creative emphasis<input id="discovery-emphasis" maxlength="500" placeholder="Automatic, or describe a direction"></label>
-<button class="button secondary" id="preview-discovery" type="submit">Preview scan & cost</button><p class="small">Preview is local. It makes no model requests.</p><p id="discovery-error" class="error" role="alert"></p>
-<section id="discovery-preview" class="discovery-preview" hidden aria-labelledby="discovery-preview-title"><h3 id="discovery-preview-title">Planned scan</h3><div id="discovery-preview-details"></div><p id="discovery-budget-warning" class="discovery-budget-warning" role="status"></p><p class="small">Estimates are conservative. Actual spend depends on source length and results. The optional batch spoiler check is additional. The session spending limit remains enforced; a stopped run may have incomplete coverage.</p><button class="button primary" id="start-discovery" type="button">Start discovery</button><p class="small">Start sends the scoped screenplays to Gemini.</p></section>
-</form><div class="discovery-results"><section aria-labelledby="discovery-history-title"><h2 id="discovery-history-title">Saved discovery runs</h2><p class="small">Open reports and saved cuts without a key. Resuming a run uses Gemini.</p><div id="discovery-history"></div></section><section id="discovery-run-report" class="discovery-run-report" hidden aria-labelledby="discovery-report-title"><h2 id="discovery-report-title">Run report</h2><div id="discovery-report-body"></div></section></div></div>
-</section>
-
+<div class="discovery-modebar"><button class="quiet" id="discovery-back" type="button"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5m6-6-6 6 6 6"/></svg>Back to cut room</button><span>Full-show discovery</span><span id="discovery-show-name"></span></div>
+<div class="discovery-intro"><div><h1 id="discovery-title">Every episode.<br>One promo each.</h1><p>Find one promo from each episode, then rank the episode promos in a single posting order.</p><div class="discovery-method"><span>Read the show</span><span>Check the cuts</span><span>Rank the promos</span></div></div><div class="discovery-source-stamp"><strong id="discovery-episode-count">0</strong><span>uploaded episodes<br>one promo per episode</span></div></div>
+<div class="discovery-layout"><div class="discovery-source-area"><h2>Every episode supplies its own promo.</h2><p id="discovery-scope-summary" class="small"></p><details id="discovery-source-ledger" class="discovery-source-ledger" open><summary>Episode coverage · Open the source ledger</summary><div id="discovery-episode-map" class="discovery-episode-map" aria-label="Episode coverage"></div></details><p class="small">Every uploaded episode is included. Each source window is saved as it completes. Interrupted runs pick up from their checkpoints.</p><div class="discovery-process-note"><h3>Small requests. A traceable result.</h3><p>Each episode is processed in source-sized batches with complete dialogue. Longer episodes can use several windows, but only one final promo is kept per episode. No promo combines different episodes.</p></div></div>
+<form id="discovery-form" class="brief discovery-brief"><h2>Set the search.</h2><label>Cut structure<select id="discovery-structure"><option value="either">Either · Prefer continuous</option><option value="continuous">Continuous only</option><option value="stitched">Stitched within the episode</option></select></label><fieldset class="duration-inputs"><legend>Duration per promo</legend><label>Min <input id="discovery-min" type="number" min="20" max="60" value="20" required> s</label><span>—</span><label>Max <input id="discovery-max" type="number" min="20" max="60" value="60" required> s</label></fieldset><label>Creative emphasis<input id="discovery-emphasis" maxlength="500" placeholder="Optional · e.g. betrayal, forbidden romance"></label><p class="small">One promo per episode. All available episode drafts are ranked, including flagged cuts. Passed drafts come first; failed checks stay visible.</p><button class="button primary" id="preview-discovery" type="submit">Plan the full-show scan</button><p class="small">Preview is local. No API calls yet.</p><p id="discovery-error" class="error" role="alert"></p></form></div>
+<div class="discovery-results"><section id="discovery-run-report" class="discovery-run-report" hidden aria-labelledby="discovery-report-title"><h2 id="discovery-report-title">The posting order.</h2><div id="discovery-report-body"></div></section><section class="discovery-archive" aria-labelledby="discovery-history-title"><h2 id="discovery-history-title">Saved searches</h2><p class="small">Open saved results without a key. Resume uses your connected model.</p><div id="discovery-history"></div></section></div></section>
 </main>
 
   <!-- App Footer -->
@@ -434,39 +427,7 @@
   </footer>
 
   <!-- Connect Modal Dialog -->
-  <dialog id="connect-dialog" aria-labelledby="connect-title">
-    <form id="connect-form">
-      <div class="dialog-heading">
-        <h2 id="connect-title">Connect your Gemini key</h2>
-        <button type="button" class="quiet" id="close-connect" aria-label="Close connection settings">Close</button>
-      </div>
-      <p class="small">Enter your key privately here. It stays in the local server’s memory for this session and is never stored in the project or export.</p>
-      
-      <label>
-        API key
-        <input id="api-key" type="password" autocomplete="off" spellcheck="false" required>
-      </label>
-
-      <label>
-        Model
-        <select id="model" required>
-          <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite · Recommended</option>
-          <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite · Lower cost</option>
-          <option value="gemini-3.8-flash">Gemini 3.8 Flash · Original</option>
-        </select>
-      </label>
-
-      <p class="small">The model must be available to your key. There is no automatic model substitution.</p>
-
-      <label>
-        Session spending limit (USD)
-        <input type="number" id="budget" value="2" min="0.01" max="2" step="0.01" required>
-      </label>
-
-      <p id="connect-error" class="error" role="alert"></p>
-      <button class="button primary" type="submit" id="save-connect">Connect & validate</button>
-    </form>
-  </dialog>
+  <dialog id="connect-dialog" aria-labelledby="connect-title"><form id="connect-form"><div class="dialog-heading"><h2 id="connect-title">Connect your Gemini key</h2><button type="button" class="quiet" id="close-connect" aria-label="Close connection settings">Close</button></div><p class="small">Enter your key privately here. It stays in the local server’s memory for this session and is never stored in the project or export.</p><label>API key<input id="api-key" type="password" autocomplete="off" spellcheck="false" required></label><label>Model<select id="model" required><option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite · Recommended</option><option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite · Lower cost</option><option value="gemini-3.8-flash">Gemini 3.8 Flash · Original</option></select></label><p class="small">The model must be available to your key. There is no automatic model substitution.</p><label>Spending limit for this API key (USD)<input type="number" id="budget" value="2" min="0.01" step="0.01" required></label><p class="small">Choose your own limit. It applies to recorded usage and held reservations for this key; reconnecting does not reset usage.</p><p id="connect-error" class="error" role="alert"></p><button class="button primary" type="submit" id="save-connect">Connect & validate</button></form></dialog>
 
   <!-- Replace Warning Modal Dialog -->
   <dialog id="replace-dialog" aria-labelledby="replace-title">
@@ -478,9 +439,20 @@
     </div>
   </dialog>
 
+  <dialog id="repair-picker" aria-labelledby="repair-picker-title"><div class="dialog-heading"><h2 id="repair-picker-title">Choose failed promos to repair</h2><button type="button" id="repair-picker-close" class="quiet">Close</button></div><p class="small">Only drafts failing the current cut checks appear. Requests run one at a time. Your drafts stay unchanged until you choose a proposed repair.</p><label class="checkbox"><input id="repair-pick-all" type="checkbox">Select all failed promos</label><div id="repair-picker-list" class="repair-picker-list"></div><p id="repair-picker-error" class="error" role="alert"></p><button type="button" id="repair-selected" class="button primary" disabled>Repair selected promos</button></dialog>
+<dialog id="repair-dialog" class="repair-dialog" aria-labelledby="repair-dialog-title" aria-describedby="repair-dialog-description">
+    <header class="repair-dialog-heading"><div><h2 id="repair-dialog-title">Compare your repair</h2><p id="repair-dialog-description">Your current draft stays saved until you choose the new one.</p></div><button type="button" id="repair-decide-later" class="quiet">Decide later</button></header>
+    <div id="repair-change" class="repair-change"></div>
+    <div class="repair-comparison"><section aria-labelledby="repair-current-title"><h3 id="repair-current-title">Current draft</h3><div id="repair-current-summary"></div></section><section aria-labelledby="repair-new-title"><h3 id="repair-new-title">Proposed repair</h3><div id="repair-new-summary"></div></section></div>
+    <p id="repair-dialog-error" role="alert" hidden></p>
+    <section id="repair-keep-warning" class="repair-keep-warning" role="alert" hidden><h3>Keep the draft with failed cut checks?</h3><p>You can keep this cut and run Virality Review. Failed cut checks remain visible as warnings.</p><div class="repair-warning-actions"><button type="button" id="repair-back" class="button secondary">Back to comparison</button><button type="button" id="repair-confirm-keep" class="button repair-action">Keep current draft</button></div></section>
+    <footer class="repair-dialog-actions"><p id="repair-apply-help"></p><div><button type="button" id="repair-keep-current" class="button secondary">Keep current draft</button><button type="button" id="repair-use-new" class="button primary">Keep new draft</button></div></footer>
+  </dialog>
+
   <noscript>
     <p class="global-error">Enable JavaScript to import scripts and use this local studio.</p>
   </noscript>
-  <script src="/static/app.js?v=discovery-20261108" defer></script>
+  <script src="/static/app.js?v=repair-choice-20261109" defer></script>
+<dialog id="discovery-preview" class="scan-plan-dialog" aria-labelledby="discovery-preview-title"><div class="scan-plan-heading"><span class="eyebrow">Before the first call</span><button id="close-discovery-preview" type="button" class="quiet" aria-label="Close scan plan">Close</button></div><h3 id="discovery-preview-title">Your scan plan</h3><div id="discovery-preview-details"></div><p id="discovery-budget-warning" class="discovery-budget-warning" role="status"></p><p class="small">Provider quotas and the spending limit still apply. Saved batches survive interruption; unfinished coverage stays visible.</p><button class="button primary" id="start-discovery" type="button">Find & rank promos</button><p class="small">Sends all uploaded episodes in bounded batches to your connected model.</p><p id="scan-plan-error" class="error" role="alert"></p></dialog>
 </body>
 </html>

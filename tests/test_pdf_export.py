@@ -37,10 +37,7 @@ def sample_project(long=False):
 
 def extracted(data):
     with fitz.open(stream=data, filetype='pdf') as document:
-        # System fonts can wrap the same words differently on Windows/Linux.
-        # Content assertions ignore layout whitespace; geometry tests below
-        # independently retain strict bounds and pagination checks.
-        return '\n'.join(' '.join(page.get_text().split()) for page in document)
+        return '\n'.join(page.get_text() for page in document)
 
 
 def test_pdf_contains_every_draft_original_dialogue_checks_and_honest_states():
@@ -50,13 +47,14 @@ def test_pdf_contains_every_draft_original_dialogue_checks_and_honest_states():
     assert data.startswith(b'%PDF-')
     assert project == before
     text = extracted(data)
-    for expected in ['The Letter / Promo Collection', 'ELIGIBLE', 'REVIEW PENDING', 'NEEDS CHANGES', 'SOURCE 00:00.00 - 00:25.00', 'PROMO 00:00.00 - 00:25.00', 'ALICE', '“Who took my letter?”', 'Café <door> & a clue.', 'Episode 7', 'Unanswered question'.upper(), 'Source-supported editorial judgment.', 'No dialogue cut mid-line', 'NOT CHECKED', 'Boundary overlap', 'footage']:
+    for expected in ['The Letter / Promo Collection', 'ELIGIBLE', 'REVIEW PENDING', 'NEEDS CHANGES', 'SOURCE 00:00.00 - 00:25.00', 'PROMO 00:00.00 - 00:25.00', 'ALICE', '“Who took my letter?”', 'Café <door> & a clue.', 'Episode 7', 'Unanswered question'.upper(), 'Source-supported editorial judgment.', 'Hook in first 3 seconds', 'NOT CHECKED', 'Boundary overlap', 'footage']:
         assert expected in text
     pending = text.split('Saved but awaiting review')[-1].split('A boundary to repair')[0]
     assert 'No score or approval is available.' in pending
     assert 'Editorial rubric:' not in pending
     assert 'Rubric scores withheld' in pending
     assert 'Complete editorial review' not in pending
+    assert 'Story order' not in pending
     with fitz.open(stream=data, filetype='pdf') as document:
         assert len(document) >= 4
         assert any(font[1] == 'ttf' for page in document for font in page.get_fonts())

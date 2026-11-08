@@ -1,0 +1,400 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-08T19:07:01.976037+00:00",
+  "title": "Design System: Promo Studio",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Bg",
+        "tonalRamp": [
+          "oklch(15.0% 0.0113 267.69)",
+          "oklch(26.4% 0.0113 267.69)",
+          "oklch(37.9% 0.0113 267.69)",
+          "oklch(49.3% 0.0113 267.69)",
+          "oklch(60.7% 0.0113 267.69)",
+          "oklch(72.1% 0.0113 267.69)",
+          "oklch(83.6% 0.0113 267.69)",
+          "oklch(95.0% 0.0113 267.69)"
+        ]
+      },
+      "bg-surface": {
+        "role": "neutral",
+        "displayName": "Bg Surface",
+        "tonalRamp": [
+          "oklch(15.0% 0.0194 265.97)",
+          "oklch(26.4% 0.0194 265.97)",
+          "oklch(37.9% 0.0194 265.97)",
+          "oklch(49.3% 0.0194 265.97)",
+          "oklch(60.7% 0.0194 265.97)",
+          "oklch(72.1% 0.0194 265.97)",
+          "oklch(83.6% 0.0194 265.97)",
+          "oklch(95.0% 0.0194 265.97)"
+        ]
+      },
+      "bg-panel": {
+        "role": "neutral",
+        "displayName": "Bg Panel",
+        "tonalRamp": [
+          "oklch(15.0% 0.0212 263.98)",
+          "oklch(26.4% 0.0212 263.98)",
+          "oklch(37.9% 0.0212 263.98)",
+          "oklch(49.3% 0.0212 263.98)",
+          "oklch(60.7% 0.0212 263.98)",
+          "oklch(72.1% 0.0212 263.98)",
+          "oklch(83.6% 0.0212 263.98)",
+          "oklch(95.0% 0.0212 263.98)"
+        ]
+      },
+      "bg-elevated": {
+        "role": "neutral",
+        "displayName": "Bg Elevated",
+        "tonalRamp": [
+          "oklch(15.0% 0.0286 263.85)",
+          "oklch(26.4% 0.0286 263.85)",
+          "oklch(37.9% 0.0286 263.85)",
+          "oklch(49.3% 0.0286 263.85)",
+          "oklch(60.7% 0.0286 263.85)",
+          "oklch(72.1% 0.0286 263.85)",
+          "oklch(83.6% 0.0286 263.85)",
+          "oklch(95.0% 0.0286 263.85)"
+        ]
+      },
+      "bg-hover": {
+        "role": "neutral",
+        "displayName": "Bg Hover",
+        "tonalRamp": [
+          "oklch(15.0% 0.0338 264.80)",
+          "oklch(26.4% 0.0338 264.80)",
+          "oklch(37.9% 0.0338 264.80)",
+          "oklch(49.3% 0.0338 264.80)",
+          "oklch(60.7% 0.0338 264.80)",
+          "oklch(72.1% 0.0338 264.80)",
+          "oklch(83.6% 0.0338 264.80)",
+          "oklch(95.0% 0.0338 264.80)"
+        ]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Accent",
+        "tonalRamp": [
+          "oklch(15.0% 0.1647 70.08)",
+          "oklch(26.4% 0.1647 70.08)",
+          "oklch(37.9% 0.1647 70.08)",
+          "oklch(49.3% 0.1647 70.08)",
+          "oklch(60.7% 0.1647 70.08)",
+          "oklch(72.1% 0.1647 70.08)",
+          "oklch(83.6% 0.1647 70.08)",
+          "oklch(95.0% 0.1647 70.08)"
+        ]
+      },
+      "accent-light": {
+        "role": "primary",
+        "displayName": "Accent Light",
+        "tonalRamp": [
+          "oklch(15.0% 0.1644 84.43)",
+          "oklch(26.4% 0.1644 84.43)",
+          "oklch(37.9% 0.1644 84.43)",
+          "oklch(49.3% 0.1644 84.43)",
+          "oklch(60.7% 0.1644 84.43)",
+          "oklch(72.1% 0.1644 84.43)",
+          "oklch(83.6% 0.1644 84.43)",
+          "oklch(95.0% 0.1644 84.43)"
+        ]
+      },
+      "accent-dark": {
+        "role": "primary",
+        "displayName": "Accent Dark",
+        "tonalRamp": [
+          "oklch(15.0% 0.1574 58.32)",
+          "oklch(26.4% 0.1574 58.32)",
+          "oklch(37.9% 0.1574 58.32)",
+          "oklch(49.3% 0.1574 58.32)",
+          "oklch(60.7% 0.1574 58.32)",
+          "oklch(72.1% 0.1574 58.32)",
+          "oklch(83.6% 0.1574 58.32)",
+          "oklch(95.0% 0.1574 58.32)"
+        ]
+      },
+      "accent-ink": {
+        "role": "primary",
+        "displayName": "Accent Ink",
+        "tonalRamp": [
+          "oklch(15.0% 0.0234 82.51)",
+          "oklch(26.4% 0.0234 82.51)",
+          "oklch(37.9% 0.0234 82.51)",
+          "oklch(49.3% 0.0234 82.51)",
+          "oklch(60.7% 0.0234 82.51)",
+          "oklch(72.1% 0.0234 82.51)",
+          "oklch(83.6% 0.0234 82.51)",
+          "oklch(95.0% 0.0234 82.51)"
+        ]
+      },
+      "cyan": {
+        "role": "secondary",
+        "displayName": "Cyan",
+        "tonalRamp": [
+          "oklch(15.0% 0.1390 232.66)",
+          "oklch(26.4% 0.1390 232.66)",
+          "oklch(37.9% 0.1390 232.66)",
+          "oklch(49.3% 0.1390 232.66)",
+          "oklch(60.7% 0.1390 232.66)",
+          "oklch(72.1% 0.1390 232.66)",
+          "oklch(83.6% 0.1390 232.66)",
+          "oklch(95.0% 0.1390 232.66)"
+        ]
+      },
+      "emerald": {
+        "role": "secondary",
+        "displayName": "Emerald",
+        "tonalRamp": [
+          "oklch(15.0% 0.1491 162.48)",
+          "oklch(26.4% 0.1491 162.48)",
+          "oklch(37.9% 0.1491 162.48)",
+          "oklch(49.3% 0.1491 162.48)",
+          "oklch(60.7% 0.1491 162.48)",
+          "oklch(72.1% 0.1491 162.48)",
+          "oklch(83.6% 0.1491 162.48)",
+          "oklch(95.0% 0.1491 162.48)"
+        ]
+      },
+      "rose": {
+        "role": "secondary",
+        "displayName": "Rose",
+        "tonalRamp": [
+          "oklch(15.0% 0.2154 16.44)",
+          "oklch(26.4% 0.2154 16.44)",
+          "oklch(37.9% 0.2154 16.44)",
+          "oklch(49.3% 0.2154 16.44)",
+          "oklch(60.7% 0.2154 16.44)",
+          "oklch(72.1% 0.2154 16.44)",
+          "oklch(83.6% 0.2154 16.44)",
+          "oklch(95.0% 0.2154 16.44)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Text",
+        "tonalRamp": [
+          "oklch(15.0% 0.0034 247.86)",
+          "oklch(26.4% 0.0034 247.86)",
+          "oklch(37.9% 0.0034 247.86)",
+          "oklch(49.3% 0.0034 247.86)",
+          "oklch(60.7% 0.0034 247.86)",
+          "oklch(72.1% 0.0034 247.86)",
+          "oklch(83.6% 0.0034 247.86)",
+          "oklch(95.0% 0.0034 247.86)"
+        ]
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Text Secondary",
+        "tonalRamp": [
+          "oklch(15.0% 0.0198 252.89)",
+          "oklch(26.4% 0.0198 252.89)",
+          "oklch(37.9% 0.0198 252.89)",
+          "oklch(49.3% 0.0198 252.89)",
+          "oklch(60.7% 0.0198 252.89)",
+          "oklch(72.1% 0.0198 252.89)",
+          "oklch(83.6% 0.0198 252.89)",
+          "oklch(95.0% 0.0198 252.89)"
+        ]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Text Muted",
+        "tonalRamp": [
+          "oklch(15.0% 0.0340 257.26)",
+          "oklch(26.4% 0.0340 257.26)",
+          "oklch(37.9% 0.0340 257.26)",
+          "oklch(49.3% 0.0340 257.26)",
+          "oklch(60.7% 0.0340 257.26)",
+          "oklch(72.1% 0.0340 257.26)",
+          "oklch(83.6% 0.0340 257.26)",
+          "oklch(95.0% 0.0340 257.26)"
+        ]
+      },
+      "text-dim": {
+        "role": "neutral",
+        "displayName": "Text Dim",
+        "tonalRamp": [
+          "oklch(15.0% 0.0395 259.36)",
+          "oklch(26.4% 0.0395 259.36)",
+          "oklch(37.9% 0.0395 259.36)",
+          "oklch(49.3% 0.0395 259.36)",
+          "oklch(60.7% 0.0395 259.36)",
+          "oklch(72.1% 0.0395 259.36)",
+          "oklch(83.6% 0.0395 259.36)",
+          "oklch(95.0% 0.0395 259.36)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "technical": {
+        "displayName": "Technical references",
+        "purpose": "Source ranges and timeline metadata; monospace fallback stack."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-sm",
+        "value": "0 1px 3px rgba(0, 0, 0, 0.5)",
+        "purpose": "Restored ambient suite depth."
+      },
+      {
+        "name": "shadow-md",
+        "value": "0 4px 16px rgba(0, 0, 0, 0.55), 0 1px 3px rgba(0, 0, 0, 0.3)",
+        "purpose": "Restored ambient suite depth."
+      },
+      {
+        "name": "shadow-lg",
+        "value": "0 12px 36px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.4)",
+        "purpose": "Restored ambient suite depth."
+      },
+      {
+        "name": "shadow-glow",
+        "value": "0 0 20px rgba(245, 158, 11, 0.2)",
+        "purpose": "Restored ambient suite depth."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Shared state easing."
+      },
+      {
+        "name": "fast",
+        "value": "0.15s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Control transitions; disabled under reduced motion."
+      },
+      {
+        "name": "normal",
+        "value": "0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Longer state transitions; disabled under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "compact",
+        "value": "1100px"
+      },
+      {
+        "name": "stack",
+        "value": "800px"
+      },
+      {
+        "name": "mobile",
+        "value": "600px"
+      },
+      {
+        "name": "discovery-compact",
+        "value": "1000px"
+      },
+      {
+        "name": "discovery-stack",
+        "value": "700px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "description": "Restored suite action.",
+      "html": "<button class=\"ds-primary\">Primary Button</button>",
+      "css": ".ds-primary{font:600 13px/1.55 var(--font-sans,Inter,sans-serif);min-height:42px;padding:9px 18px;border-radius:var(--radius-md,10px);cursor:pointer;transition:all .15s cubic-bezier(.16,1,.3,1);background:linear-gradient(135deg,#fbbf24 0%,#f59e0b 60%,#d97706 100%);color:var(--accent-ink,#140e04);border:1px solid rgba(255,255,255,.25);font-weight:650;}.ds-primary:hover:not(:disabled){filter:brightness(1.05);box-shadow:0 0 20px var(--accent-glow,rgba(245,158,11,.25))}.ds-primary:focus-visible{outline:2px solid var(--accent,#f59e0b);outline-offset:3px}.ds-primary:active:not(:disabled){transform:translateY(1px)}.ds-primary:disabled{opacity:.45;cursor:not-allowed}",
+      "refersTo": "button-primary"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "description": "Restored suite action.",
+      "html": "<button class=\"ds-secondary\">Secondary Button</button>",
+      "css": ".ds-secondary{font:600 13px/1.55 var(--font-sans,Inter,sans-serif);min-height:42px;padding:9px 18px;border-radius:var(--radius-md,10px);cursor:pointer;transition:all .15s cubic-bezier(.16,1,.3,1);background:var(--bg-elevated,#1b2230);color:var(--text,#f8fafc);border:1px solid var(--line-strong,rgba(255,255,255,.18));backdrop-filter:blur(8px);}.ds-secondary:hover:not(:disabled){background:var(--bg-hover,#1f2738)}.ds-secondary:focus-visible{outline:2px solid var(--accent,#f59e0b);outline-offset:3px}.ds-secondary:active:not(:disabled){transform:translateY(1px)}.ds-secondary:disabled{opacity:.45;cursor:not-allowed}",
+      "refersTo": "button-secondary"
+    },
+    {
+      "name": "Quiet Button",
+      "kind": "button",
+      "description": "Restored suite action.",
+      "html": "<button class=\"ds-quiet\">Quiet Button</button>",
+      "css": ".ds-quiet{font:600 13px/1.55 var(--font-sans,Inter,sans-serif);min-height:42px;padding:9px 18px;border-radius:var(--radius-md,10px);cursor:pointer;transition:all .15s cubic-bezier(.16,1,.3,1);background:transparent;color:var(--text-muted,#8492a6);border:1px solid transparent;}.ds-quiet:hover:not(:disabled){color:var(--text,#f8fafc);background:rgba(255,255,255,.05)}.ds-quiet:focus-visible{outline:2px solid var(--accent,#f59e0b);outline-offset:3px}.ds-quiet:active:not(:disabled){transform:translateY(1px)}.ds-quiet:disabled{opacity:.45;cursor:not-allowed}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Slate field with amber focus ring.",
+      "html": "<label class=\"ds-label\">Creative emphasis<input class=\"ds-field\" placeholder=\"Optional direction\"></label>",
+      "css": ".ds-label{display:grid;gap:8px;font:13px/1.55 var(--font-sans,Inter,sans-serif);color:var(--text,#f8fafc)}.ds-field{min-height:42px;padding:9px 14px;border:1px solid var(--line,rgba(255,255,255,.1));border-radius:10px;background:var(--bg-surface,#10141d);color:var(--text,#f8fafc);font:inherit}.ds-field:focus{border-color:var(--accent,#f59e0b);box-shadow:0 0 0 3px var(--accent-subtle,rgba(245,158,11,.12));background:var(--bg-elevated,#1b2230)}.ds-field:focus-visible{outline:2px solid var(--accent,#f59e0b);outline-offset:3px}"
+    },
+    {
+      "name": "Review Card",
+      "kind": "card",
+      "description": "Restored rounded slate review surface.",
+      "html": "<section class=\"ds-card\"><h3>Source review</h3><p>Review exact source evidence.</p></section>",
+      "css": ".ds-card{padding:24px;background:var(--bg-panel,#151a24);border:1px solid var(--line,rgba(255,255,255,.1));border-radius:20px;box-shadow:var(--shadow-md);font:14px/1.55 var(--font-sans,Inter,sans-serif);color:var(--text,#f8fafc)}.ds-card h3{font-size:14px;color:var(--accent,#f59e0b)}.ds-card p{font-size:12px;color:var(--text-muted,#8492a6)}"
+    },
+    {
+      "name": "Source Ledger",
+      "kind": "custom",
+      "description": "Native coverage disclosure with actual episode status.",
+      "html": "<details class=\"ds-ledger\"><summary>Episode coverage</summary><p>Source window status appears here.</p></details>",
+      "css": ".ds-ledger{font:12px/1.8 var(--font-sans,Inter,sans-serif);color:var(--text-muted,#8492a6)}.ds-ledger summary{cursor:pointer;min-height:32px}.ds-ledger summary:hover{color:var(--text,#f8fafc)}.ds-ledger summary:focus-visible{outline:2px solid var(--accent,#f59e0b);outline-offset:3px}"
+    },
+    {
+      "name": "Workflow Navigation",
+      "kind": "nav",
+      "description": "Restored manual stages; hidden in full-show discovery.",
+      "html": "<nav class=\"ds-flow\" aria-label=\"Workflow\"><button aria-current=\"step\"><span>1</span>Import</button><button><span>2</span>Episodes</button></nav>",
+      "css": ".ds-flow{display:flex;align-items:center;gap:12px;height:56px;padding:0 36px;background:rgba(13,16,23,.95);border-bottom:1px solid var(--line,rgba(255,255,255,.1))}.ds-flow button{display:inline-flex;align-items:center;gap:9px;color:var(--text-dim,#536177);font:500 13px/1.55 var(--font-sans,Inter,sans-serif);padding:6px 14px;border-radius:9999px;border:1px solid transparent;background:none;cursor:pointer}.ds-flow button:hover{color:var(--text-secondary,#cbd5e1);background:rgba(255,255,255,.04)}.ds-flow button:focus-visible{outline:2px solid var(--accent,#f59e0b);outline-offset:3px}.ds-flow span{display:grid;place-items:center;width:22px;height:22px;background:var(--bg-elevated,#1b2230);border:1px solid var(--line,rgba(255,255,255,.1));border-radius:50%;font:700 11px var(--font-mono,monospace)}.ds-flow [aria-current]{color:#fff;background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.25)}.ds-flow [aria-current] span{background:var(--accent,#f59e0b);color:var(--accent-ink,#140e04)}"
+    },
+    {
+      "name": "Sample Label",
+      "kind": "chip",
+      "description": "Technical provenance badge.",
+      "html": "<span class=\"ds-label-chip\">Sample script</span>",
+      "css": ".ds-label-chip{display:inline-flex;align-items:center;gap:6px;font:500 11px/1.55 var(--font-sans,Inter,sans-serif);color:var(--cyan,#38bdf8);background:var(--cyan-subtle,rgba(56,189,248,.12));border:1px solid var(--cyan-line,rgba(56,189,248,.3));padding:4px 10px;border-radius:9999px;letter-spacing:.02em}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Modern cinematic film suite",
+    "overview": "Obsidian ground, deep slate layers and warm amber actions restore the approved film-suite direction from `outputs/Promo-Studio-GitHub/static`. This record follows the active `static/styles.css`, `static/index.html` and `static/app.js`. The restored source is the visual authority; no new exploration, seed or comp is claimed.\n\nThe interface combines softly rounded elevated panels, restrained glass treatments and ambient action glows with precise source references. Full-show discovery gives this same material vocabulary a spacious editorial opening and ruled posting-order results. The PDF remains a light paper handoff with dark ink and warm accent rules.",
+    "keyCharacteristics": [
+      "Obsidian ground and layered slate surfaces",
+      "Warm amber actions and focus",
+      "Sans-serif reading with monospaced technical references",
+      "Ambient depth, translucent surfaces and rounded panels",
+      "Source-led ranked results and inspectable coverage"
+    ],
+    "rules": [
+      {
+        "name": "The Action Signal Rule",
+        "body": "Use amber for primary actions, selected states and keyboard focus; keep cyan and semantic colors tied to their technical or status meanings.",
+        "section": "colors"
+      },
+      {
+        "name": "The Source Reference Rule",
+        "body": "Separate exact source text from technical ranges and editorial reasons; preserve line breaks and keep source references easy to scan.",
+        "section": "typography"
+      },
+      {
+        "name": "The Material Continuity Rule",
+        "body": "Keep slate layers, soft depth and warm action glows coherent across manual and discovery surfaces.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** use the restored slate and amber tokens across manual and discovery modes.",
+      "**Do** preserve distinct source text, technical timecodes and editorial reasons.",
+      "**Do** keep focus, completion, failure and incomplete coverage states explicit.",
+      "**Do** retain the form-first mobile discovery order and accessible disclosures."
+    ],
+    "donts": [
+      "**Don't** substitute obsolete palette values for the restored source tokens.",
+      "**Don't** treat decorative illustration typography as the general heading family.",
+      "**Don't** remove source references or obscure incomplete coverage to simplify a result."
+    ]
+  }
+}

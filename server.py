@@ -1,4 +1,5 @@
 import copy
+import math
 import hashlib
 import json
 import os
@@ -15,12 +16,11 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from parser import parse_episode, validate_cut
-from prompt_payload import SOURCE_FORMAT, payload_json
 from provider import Gemini, read_json, ProviderError, MAX_OUTPUT_TOKENS
 from models import MODELS, DEFAULT_MODEL, model_rates
 from discovery import run_discovery
 from discovery_api import install as install_discovery, find_run, run_view
-from workflow import build_brief, generate_promos, locate, check_spoilers, check_all_spoilers, DRAFT
+from workflow import build_brief, generate_promos, locate, check_spoilers, check_all_spoilers, DRAFT, check_only, clear_review, repair_selection, manual_bulk_repair
 from handoff import sheet
 from saved_output import view as saved_output_view
 from job_runtime import JobStore, DurableJob, Runtime, JobCancelled, TERMINAL, isolated_generate
@@ -107,9 +107,9 @@ def connect(body:dict):
         try:
             model_rates(model)
             budget=float(body.get('budget',2))
-            if not 0<budget<=2 or not key: raise ValueError('Enter a key and a spending limit up to $2.')
+            if isinstance(body.get('budget'),bool) or not math.isfinite(budget) or budget<=0 or not key: raise ValueError('Enter a key and a positive, finite spending limit in USD.')
             Gemini(key,model).validate()
-        except ValueError as e:raise HTTPException(400,str(e))
+        except (ValueError,TypeError,OverflowError) as e:raise HTTPException(400,str(e))
         state.update(key=key,model=model,budget=budget,keyhash=hashlib.sha256(key.encode()).hexdigest())
     return status()
 @app.post('/api/projects')
@@ -125,7 +125,21 @@ def create(body:dict):
 @app.get('/api/projects/{pid}')
 def get_project(pid:str):
     p=load(pid)
+    if isinstance(p.get('brief'),dict) and {'selected_ids','minimum','maximum','structure'}<=set(p['brief']):
+        for group in p.get('groups',[]):
+            b=dict(p['brief'],selected_ids=group.get('source_ids',p['brief']['selected_ids']))
+            for v in group.get('variations',[]):
+                check_only(p,v,b,clear=False)
+        for vid,proposal in p.get('proposals',{}).items():
+            if not isinstance(proposal,dict) or not isinstance(proposal.get('variation'),dict):continue
+            try:
+                group,_=locate(p,vid)
+                b=dict(p['brief'],selected_ids=group.get('source_ids',p['brief']['selected_ids']))
+                check_only(p,proposal['variation'],b,clear=False)
+            except (ValueError,KeyError,TypeError):continue
     stored=job_store.all()
+    from discovery import project_episode_results
+    p['discovery_runs']=[project_episode_results(p,r) if r.get('plan',{}).get('per_episode') else r for r in p.get('discovery_runs',[])]
     for run in p.get('discovery_runs',[]):
         latest=next((j for j in stored if j.get('project_id')==pid and j.get('run_id')==run['id'] and j.get('operation') in ('discovery','resume_discovery')),None)
         if run.get('status')!='done' and latest and latest['status'] in ('error','cancelled','interrupted'):
@@ -136,6 +150,7 @@ def get_project(pid:str):
 def get_saved_output(pid:str):return saved_output_view(load(pid))
 
 def call(pid,stage,prompt,output_limit=None,retry_limit=1,minimal=False,raw_only=False):
+    if stage.startswith('discovery-') and output_limit is None:output_limit=4096
     runtime=getattr(context,'runtime',None)
     job=getattr(context,'job',None)
     if runtime:runtime.check()
@@ -149,7 +164,7 @@ def call(pid,stage,prompt,output_limit=None,retry_limit=1,minimal=False,raw_only
         if runtime:runtime.check()
         with db() as c:
             current=spent()
-            if current+reserve>state['budget']:raise ValueError('This request would exceed your $2 limit, including held failure reservations. Use fewer episodes. Previous results are preserved.')
+            if current+reserve>state['budget']:raise ValueError(f'This request would exceed your ${state["budget"]:,.2f} spending limit, including held reservations. Completed work is saved. Change the spending limit in connection settings to continue.')
             c.execute('INSERT OR REPLACE INTO usage VALUES (?,?)',(state['keyhash'],current+reserve))
         try:
             options={}
@@ -204,24 +219,16 @@ def probe(body:dict):
 
 
 def material(episodes):
-    return [{'episode_id':e['id'],'episode':e['number'],'logline':e['logline'],'duration':e['duration'],'events':[x for x in e['events'] if x['kind']!='camera']} for e in episodes]
+    return [{'episode_id':e['id'],'id':e['id'],'episode':e['number'],'logline':e['logline'],'duration':e['duration'],'events':[x for x in e['events'] if x['kind']!='camera']} for e in episodes]
 
 VARIANT=DRAFT
 
-def check_only(p,v,brief):
-    from workflow import normalize_sources
-    normalize_sources(v,p['episodes'],brief['selected_ids'])
-    v['validation']=validate_cut(v,p['episodes'],brief['selected_ids'],brief['minimum'],brief['maximum'],brief['structure'])
-    v.setdefault('rubric',[]);v.setdefault('narrative',{})
-    v['review_status']='unreviewed' if v['validation']['eligible'] else 'needs_repair'
-    return v
-
-def review(p,v,brief):
+def review(p,v,brief,allow_failed=False):
     from workflow import normalize_sources
     normalize_sources(v,p['episodes'],brief['selected_ids'])
     preflight=validate_cut(v,p['episodes'],brief['selected_ids'],brief['minimum'],brief['maximum'],brief['structure'])
-    failed=[c for c in preflight['checks'] if not c['passed'] and c['name'] not in ('Standalone story & unresolved ending','Complete editorial review')]
-    if failed:
+    failed=[c for c in preflight['checks'] if not c['passed']]
+    if failed and not allow_failed:
         v.update(narrative={},rubric=[],review_status='needs_repair',review_notes='Local source checks failed; no AI review was requested. '+ '; '.join(c['name']+': '+c['detail'] for c in failed),validation=preflight)
         return v
     clip=[]
@@ -231,7 +238,7 @@ def review(p,v,brief):
         ep=next((e for e in p['episodes'] if e['id']==s.get('episode_id')),None)
         if ep and isinstance(s.get('start'),(int,float)) and isinstance(s.get('end'),(int,float)):
             clip.append({'segment':s,'events':[e for e in ep['events'] if e['start']>=s['start'] and e['end']<=s['end']]})
-    result=call(p['id'],'independent-clip-review','Review ONLY the clip below as a newcomer, with no show context. Assess whether it has standalone clarity, escalation, an unresolved cliffhanger, and intelligible causal progression within the excerpt. Do not require a complete emotional arc: select an understandable excerpt with minimal setup, rising tension and an unresolved turn. Stop before the payoff; never extend beyond the duration limit to complete a scene. Be strict: do not assume unseen context. Return JSON {narrative:{standalone:boolean,escalation:boolean,cliffhanger:boolean,coherent:boolean},review_notes:string,rubric:[{criterion,score,reason}]}. Exactly five criteria: Hook, Standalone clarity, Escalation, Cliffhanger, Cut quality. Scores 0–5. Hook must earn attention first3sec. Stitched cuts need understandable transitions. Clip follows.'+SOURCE_FORMAT+' Clip: '+payload_json(clip))
+    result=call(p['id'],'independent-clip-review','Review ONLY the clip below as a newcomer, with no show context. Assess whether it has standalone clarity, escalation, an unresolved cliffhanger, and coherent start-to-end story. Be strict: do not assume unseen context. Return JSON {narrative:{standalone:boolean,escalation:boolean,cliffhanger:boolean,coherent:boolean},review_notes:string,rubric:[{criterion,score,reason}]}. Exactly five criteria: Hook, Standalone clarity, Escalation, Cliffhanger, Cut quality. Scores 0–5. Hook must earn attention first3sec. Stitched cuts need understandable transitions. Local cut-check warnings (do not invent missing source or assume these passed): '+json.dumps(failed,ensure_ascii=False)+' Clip: '+json.dumps(clip,ensure_ascii=False))
     from discovery import _review_result
     rid=v.get('id','clip')
     assessment=_review_result(dict(results=[dict(result,promo_id=rid)]),[rid])[rid]
@@ -270,22 +277,36 @@ def start(pid,operation,body):
                 context.runtime.check();job.update(status='running',message='Reading source material',started_at=time.time())
             p=load(pid)
             context.brief=body if operation=='generate' else p.get('brief')
-            if operation in ('discovery','resume_discovery','discovery_spoilers','discovery_review'):
+            if operation in ('discovery','resume_discovery','discovery_spoilers','discovery_episode_repair','discovery_episode_repairs','discovery_episode_review'):
                 run=find_run(p,body['run_id']);context.brief=run['plan']
                 job.update(run_id=run['id'])
-                if operation=='discovery_spoilers':
+                if operation=='discovery_episode_repairs':
+                    from discovery import repair_episodes
+                    job['message']='Proposing repairs for selected episodes'
+                    repair_episodes(p,run,body['episode_ids'],call,save,material)
+                elif operation=='discovery_episode_review':
+                    from discovery import review_episode
+                    job['message']='Running optional Virality Review'
+                    review_episode(p,run,body['episode_id'],call,save,material)
+                elif operation=='discovery_episode_repair':
+                    from discovery import repair_episode
+                    job['message']='Repairing only the selected episode promo'
+                    repair_episode(p,run,body['episode_id'],call,save,material)
+                elif operation=='discovery_spoilers':
                     view=run_view(p,run['id']);check_all_spoilers(view,call,material)
                     run['shortlist']=view['groups'];run['spoiler_batch_check']=view['spoiler_batch_check']
                 else:
-                    run_discovery(p,run,call,save,material,review_enabled=operation=='discovery_review')
+                    run_discovery(p,run,call,save,material)
+            elif operation=='manual_bulk_repair':
+                manual_bulk_repair(p,body['variation_ids'],job,call,save,material)
             elif operation=='virality-review':
                 group,v=locate(p,body['variation_id'])
                 brief=dict(p['brief'],selected_ids=group.get('source_ids',p['brief']['selected_ids']))
                 job['message']='Running optional Virality Review'
-                review(p,v,brief)
+                review(p,v,brief,allow_failed=True)
             elif operation=='analyze':
                 chosen=[e for e in p['episodes'] if e['id'] in body['selected_ids']]
-                result=call(pid,'selected-episode-analysis','Read ONLY the chosen episodes and infer genres with source evidence, central conflict, relationships and tropes. This is a limited selection, not the full show; acknowledge uncertainty. Return JSON {title,logline,primary_genre,secondary_genre,themes:[string],relationships:[string],evidence:[string],warnings:[string]}. Evidence strings must name episode/time. Flag identity ambiguities instead of merging characters. Source follows.'+SOURCE_FORMAT+' Source: '+payload_json(material(chosen)))
+                result=call(pid,'selected-episode-analysis','Read ONLY the chosen episodes and infer genres with source evidence, central conflict, relationships and tropes. This is a limited selection, not the full show; acknowledge uncertainty. Return JSON {title,logline,primary_genre,secondary_genre,themes:[string],relationships:[string],evidence:[string],warnings:[string]}. Evidence strings must name episode/time. Flag identity ambiguities instead of merging characters. Source: '+json.dumps(material(chosen),ensure_ascii=False))
                 for k in ('title','logline','primary_genre','secondary_genre'):
                     if not isinstance(result.get(k),str):raise ValueError('Incomplete show analysis. Retry; current project is preserved.')
                 p['analysis']=result;p['analysis_ids']=body['selected_ids']
@@ -299,8 +320,9 @@ def start(pid,operation,body):
                 group,old=locate(p,body.get('variation_id'))
                 brief=dict(p['brief'],selected_ids=group.get('source_ids',p['brief']['selected_ids']))
                 selected=[e for e in p['episodes'] if e['id'] in brief['selected_ids']]
-                from workflow import normalize_refinement, refinement_prompt
-                result=call(pid,'refinement-proposal',refinement_prompt(old,brief,selected,material,body.get('part'),body.get('prompt')))
+                from workflow import rejected_checks, normalize_refinement, REFINEMENT_FORMAT
+                feedback=' Repair these failures: '+json.dumps(rejected_checks(old)) if not old.get('validation',{}).get('eligible') else ''
+                result=call(pid,'refinement-proposal','Propose an existing-source recut. Return ONE JSON object with exactly these outer keys: variation, change, tradeoff. variation MUST be a nested OBJECT, never a title string. Put all draft fields INSIDE variation, not beside it. Shape (illustrative times only; use real source bounds and brief): '+json.dumps(REFINEMENT_FORMAT)+' '+VARIANT+' Preserve untargeted parts where possible. If impossible explain weakness, do not invent. Target:'+str(body.get('part'))+' Request:'+str(body.get('prompt'))+feedback+' Current:'+json.dumps(old)+' Brief:'+json.dumps(brief)+' Source:'+json.dumps(material(selected),ensure_ascii=False))
                 result=normalize_refinement(result)
                 v=result['variation']
                 v['id']=old['id'];v.pop('spoiler_check',None);v.pop('review_status',None);job['message']='Checking proposed source cut';check_only(p,v,brief)
@@ -308,6 +330,11 @@ def start(pid,operation,body):
             with context.runtime.lock:
                 save(p);context.runtime.check();finish_job(job,'done',('Batch complete — '+str(p['generation_summary']['passed'])+' passed; '+str(p['generation_summary']['needs_repair'])+' need repair') if job.get('operation') in ('generate','resume_generation') and p.get('generation_summary') else 'Ready')
         except JobCancelled as e:
+            if operation=='manual_bulk_repair' and 'p' in locals() and p.get('manual_repair_batch'):
+                batch=p['manual_repair_batch'];batch['status']='paused'
+                for item in batch['items']:
+                    if item['status']=='running':item.update(status='paused',error=str(e))
+                with context.runtime.lock:_save(p)
             finish_job(job,'interrupted' if context.runtime.interrupted else 'cancelled',str(e))
         except Exception as e:
             if context.runtime.cancelled.is_set():finish_job(job,'cancelled','Stopped by you. Completed saved outputs are preserved.')
@@ -350,9 +377,6 @@ def resume(pid:str):
                         v.update(saved_reviews[n]);v['validation']=validate_cut(v,p['episodes'],brief['selected_ids'],brief['minimum'],brief['maximum'],brief['structure'])
                     else:check_only(p,v,brief)
                     fingerprint=json.dumps(v.get('segments'),sort_keys=True)
-                    if fingerprint in fingerprints:
-                        v['validation'].update(eligible=False,score=None)
-                        v['validation']['checks'].append(dict(name='Distinct source version',passed=False,detail='Identical cut to a sibling.'))
                     fingerprints.add(fingerprint)
                     n+=1
             if not any(v['validation']['eligible'] for g in groups for v in g['variations']):raise ValueError('No eligible cuts. Existing results preserved.')
@@ -375,18 +399,20 @@ def generate(pid:str,body:dict):
     except (ValueError,TypeError,KeyError) as e:raise HTTPException(400,str(e))
     return start(pid,'generate',brief)
 
+@app.post('/api/projects/{pid}/repairs')
+def manual_repairs(pid:str,body:dict):
+    p=load(pid)
+    if p.get('pending_generation'):raise HTTPException(400,'Resolve the pending generation before repairing final drafts.')
+    try:repair_selection(p,body.get('variation_ids'))
+    except (ValueError,TypeError,KeyError) as e:raise HTTPException(400,str(e))
+    return start(pid,'manual_bulk_repair',{'variation_ids':body['variation_ids']})
+
 @app.post('/api/projects/{pid}/virality-review')
 def virality_review(pid:str,body:dict):
     p=load(pid)
-    if body.get('run_id'):
-        run=find_run(p,body['run_id'])
-        if run['plan']['model']!=state['model']:raise HTTPException(400,'Select this discovery run’s model first.')
-        if run.get('status')!='done':raise HTTPException(400,'Finish the discovery scan first.')
-        return dict(start(pid,'discovery_review',{'run_id':run['id']}),run_id=run['id'])
     try:group,v=locate(p,body.get('variation_id'))
     except ValueError as e:raise HTTPException(400,str(e))
     b=dict(p['brief'],selected_ids=group.get('source_ids',p['brief']['selected_ids']))
-    if not validate_cut(v,p['episodes'],b['selected_ids'],b['minimum'],b['maximum'],b['structure'])['eligible']:raise HTTPException(400,'Fix local cut checks before running Virality Review.')
     return start(pid,'virality-review',{'variation_id':v['id']})
 
 @app.post('/api/projects/{pid}/spoiler-check')
@@ -430,16 +456,23 @@ def apply(pid:str,body:dict):
     if active:raise HTTPException(409,'Wait for the current operation.')
     p=load(pid);vid=body.get('variation_id');proposal=p['proposals'].get(vid)
     if not proposal:raise HTTPException(404,'No pending proposal.')
-    v=proposal['variation'];group,_=locate(p,vid);b=p['brief'];ids=group.get('source_ids',b['selected_ids']);v.pop('spoiler_check',None);v['validation']=validate_cut(v,p['episodes'],ids,b['minimum'],b['maximum'],b['structure'])
-    if not v['validation']['eligible']:raise HTTPException(400,'This proposal failed checks. Try another cut.')
+    if not isinstance(proposal.get('variation'),dict):raise HTTPException(400,'No new draft was returned to keep.')
+    v=copy.deepcopy(proposal['variation']);clear_review(v);group,_=locate(p,vid);b=p['brief'];ids=group.get('source_ids',b['selected_ids']);v.pop('spoiler_check',None);v['validation']=validate_cut(v,p['episodes'],ids,b['minimum'],b['maximum'],b['structure'])
     for g in p['groups']:
         g['variations']=[v if x['id']==vid else x for x in g['variations']]
+    v['review_status']='unreviewed'
     del p['proposals'][vid];p.pop('spoiler_batch_check',None);return save(p)
 
 @app.get('/api/projects/{pid}/handoff')
 def handoff(pid:str,saved:bool=False):
     p=load(pid)
     return HTMLResponse(sheet(saved_output_view(p) if saved else p),headers={'Content-Disposition':'attachment; filename="promo-editor-handoff.html"'})
+
+@app.get('/api/projects/{pid}/discovery/{rid}/export.pdf')
+def discovery_pdf(pid:str,rid:str):
+    from pdf_export import build_pdf
+    p=run_view(load(pid),rid)
+    return Response(build_pdf(p),media_type='application/pdf',headers={'Content-Disposition':'attachment; filename="ranked-episode-promos.pdf"'})
 
 @app.get('/api/projects/{pid}/export.pdf')
 def export_pdf(pid:str,saved:bool=False):
@@ -450,7 +483,17 @@ def export_pdf(pid:str,saved:bool=False):
 @app.post('/api/projects/{pid}/discard')
 def discard(pid:str,body:dict):
     if active:raise HTTPException(409,'Wait for the current operation.')
-    p=load(pid);p['proposals'].pop(body.get('variation_id'),None);return save(p)
+    p=load(pid);vid=body.get('variation_id');p['proposals'].pop(vid,None)
+    try:
+        group,v=locate(p,vid);b=p['brief'];ids=group.get('source_ids',b['selected_ids'])
+        validation=validate_cut(v,p['episodes'],ids,b['minimum'],b['maximum'],b['structure'])
+        if not validation['eligible']:
+            clear_review(v);v['review_status']='needs_repair'
+            validation=validate_cut(v,p['episodes'],ids,b['minimum'],b['maximum'],b['structure'])
+            validation['warnings'].append('Kept the current cut; it still fails local cut checks and needs repair.')
+        v['validation']=validation
+    except ValueError:pass
+    return save(p)
 @app.get('/api/projects/{pid}/export')
 def export(pid:str,saved:bool=False):
     p=load(pid)
@@ -461,17 +504,14 @@ def export(pid:str,saved:bool=False):
         for v in g['variations']:
             b=p['brief'];v['validation']=validate_cut(v,p['episodes'],g.get('source_ids',b['selected_ids']),b['minimum'],b['maximum'],b['structure'])
             fingerprint=json.dumps(v.get('segments'),sort_keys=True)
-            if fingerprint in fingerprints:
-                v['validation'].update(eligible=False,score=None)
-                v['validation']['checks'].append(dict(name='Distinct source version',passed=False,detail='Identical cut to a sibling.'))
             fingerprints.add(fingerprint)
             if v['validation']['eligible']:
                 (ranked if v['validation']['score'] is not None else unranked).append(dict(group=g['title'],**v))
             else:failures.append(dict(group=g['title'],variation=v))
-    ranked.sort(key=lambda v:(v['validation']['score'] is not None,v['validation']['score'] or 0),reverse=True)
-    for n,v in enumerate([v for v in ranked if v['validation']['score'] is not None]):v['posting_priority']=n+1
+    ranked.sort(key=lambda v:v['validation']['score'] if v['validation']['score'] is not None else -1,reverse=True)
+    for n,v in enumerate(ranked):v['posting_priority']=n+1
     with db() as c:raw=[dict(stage=r['stage'],**json.loads(r['body'])) for r in c.execute('SELECT stage,body FROM raw WHERE project_id=?',(pid,))]
-    return JSONResponse(dict(project=p['name'],brief=p['brief'],analysis=p['analysis'],ranked_variations=ranked,unranked_variations=unranked,failures=failures,episodes=p['episodes'],raw_outputs=raw,methodology='Source-boundary checks plus independent clip-only AI review; 0–5 rubric weights 25/25/15/25/10. Editorial potential is not measured virality. Script timing requires footage confirmation.'),headers={'Content-Disposition':'attachment; filename="promo-studio-cuts.json"'})
+    return JSONResponse(dict(project=p['name'],brief=p['brief'],analysis=p['analysis'],ranked_variations=ranked,unranked_variations=unranked,failures=failures,episodes=p['episodes'],raw_outputs=raw,methodology='Five local cut checks determine cut eligibility. Optional independent clip-only AI review supplies ranking; 0–5 rubric weights 25/25/15/25/10. Editorial potential is not measured virality. Script timing requires footage confirmation.'),headers={'Content-Disposition':'attachment; filename="promo-studio-cuts.json"'})
 
 install_discovery(app,get_project,save,start,state,spent,lambda:bool(active))
 

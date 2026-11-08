@@ -15,6 +15,7 @@ def test_saved_output_is_available_without_key_or_model_calls(studio,monkeypatch
     r=c.get('/api/projects/'+p['id']+'/saved-output');assert r.status_code==200
     result=r.json();assert result['saved_output_summary']['saved']==1 and result['saved_output_summary']['not_generated']==1
     draft=result['groups'][0]['variations'][0];assert draft['validation']['score'] is None and draft['validation']['eligible']
+    assert result['saved_output_summary']['needs_changes']==0
     assert server.load(p['id'])==before
     exported=c.get('/api/projects/'+p['id']+'/export?saved=true').json()
     assert exported['ranked_variations']==[] and exported['unranked_variations'][0]['id']=='pending'

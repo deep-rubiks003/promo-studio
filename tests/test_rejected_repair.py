@@ -23,23 +23,17 @@ def test_bad_source_skips_paid_review(studio,monkeypatch):
     assert v['review_status']=='needs_repair' and not v['validation']['eligible'] and v['validation']['score'] is None
     assert v['segments'][0]['episode_id']==ep['id']
 
-def test_resume_repairs_previously_reviewed_rejection(studio,monkeypatch):
+def test_resume_revalidates_saved_draft_without_paid_review(studio,monkeypatch):
     p,c,h=studio;ep=p['episodes'][0];v=draft(ep,ref=ep['number']);v.update(review_status='reviewed',narrative=dict(standalone=False),rubric=[],validation=dict(eligible=False,checks=[dict(name='Source selection',passed=False,detail='Invalid reference')]))
     brief=server.build_brief(p,dict(selected_ids=[ep['id']]))
-    p['pending_generation']=dict(brief=brief,groups=[dict(id='g',title='Saved',source_ids=[ep['id']],variations=[v])]);server.save(p);calls=[]
-    def fake(pid,stage,prompt):
-        calls.append(stage)
-        if stage=='candidate-repair':
-            assert 'Invalid reference' in prompt
-            return dict(title='Fixed',promo=draft(ep,ref=ep['number']))
-        assert stage=='independent-clip-review' and 'Who took my letter?' in prompt
-        return review_result()
-    monkeypatch.setattr(server,'call',fake)
+    p['pending_generation']=dict(brief=brief,groups=[dict(id='g',title='Saved',source_ids=[ep['id']],variations=[v])]);server.save(p)
+    monkeypatch.setattr(server,'call',lambda *a:pytest.fail('Saved complete draft needs only local revalidation'))
     jid=c.post('/api/projects/'+p['id']+'/resume',headers=h,json={}).json()['job_id']
     assert finish(c,jid)['status']=='done'
-    assert calls==['candidate-repair']
-    saved=server.load(p['id']);assert saved['groups'][0]['variations'][0]['validation']['eligible']
-    assert saved['groups'][0]['rejected_drafts'][0]['segments'][0]['episode_id']==ep['number']
+    saved=server.load(p['id']);v=saved['groups'][0]['variations'][0]
+    assert v['validation']['eligible'] and v['segments'][0]['episode_id']==ep['id']
+    assert v['validation']['score'] is None
+
 
 def test_repairs_are_bounded_and_failure_explained(studio,monkeypatch):
     p,c,h=studio;ep=p['episodes'][0];calls=[]
@@ -76,7 +70,7 @@ def test_batch_continues_after_rejection_and_publishes_both(studio,monkeypatch):
     assert len(saved['groups'])==2 and not saved['groups'][0]['variations'][0]['validation']['eligible'] and saved['groups'][1]['variations'][0]['validation']['eligible']
     v=saved['groups'][0]['variations'][0]
     assert v['validation']['score'] is None and v['validation']['rubric_score'] is None
-    assert not next(c['passed'] for c in v['validation']['checks'] if c['name']=='20–60 second duration')
+    assert not next(c['passed'] for c in v['validation']['checks'] if c['name']=='Source selection')
     assert calls==['candidate-generation','candidate-generation']
     assert 'pending_generation' not in saved
 

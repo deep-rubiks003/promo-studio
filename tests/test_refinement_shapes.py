@@ -58,7 +58,7 @@ def test_unusable_refinement_keeps_current_and_existing_proposal(studio,monkeypa
     assert server.load(p['id'])==before and calls==['refinement-proposal']
 
 
-def test_flattened_invalid_cut_is_visible_but_cannot_apply(studio,monkeypatch):
+def test_flattened_invalid_cut_can_be_kept_with_warnings(studio,monkeypatch):
     p,c,h=studio;ep,old=setup_draft(p);new=proposal(ep);new['segments'][0]['end']=90
     new.update(validation=dict(eligible=True),narrative=dict(standalone=True),rubric=[dict(criterion='Hook',score=5)])
     response=dict(variation='Longer version',change='Longer ending',tradeoff='Longer duration',**new)
@@ -66,6 +66,7 @@ def test_flattened_invalid_cut_is_visible_but_cannot_apply(studio,monkeypatch):
     jid=c.post('/api/projects/'+p['id']+'/refine',headers=h,json=dict(variation_id=old['id'],part='Whole promo',prompt='Longer')).json()['job_id']
     assert finish(c,jid)['status']=='done'
     saved=server.load(p['id']);v=saved['proposals'][old['id']]['variation']
-    assert not v['validation']['eligible'] and not v['rubric']
-    assert c.post('/api/projects/'+p['id']+'/apply',headers=h,json=dict(variation_id=old['id'])).status_code==400
-    assert server.load(p['id'])['groups'][0]['variations'][0]==old
+    assert not v['validation']['eligible'] and not v.get('rubric')
+    assert c.post('/api/projects/'+p['id']+'/apply',headers=h,json=dict(variation_id=old['id'])).status_code==200
+    chosen=server.load(p['id'])['groups'][0]['variations'][0]
+    assert chosen['segments'][0]['end']==90 and not chosen['validation']['eligible']

@@ -121,11 +121,6 @@ def isolated_generate(key, model, prompt, options, runtime, worker=provider_work
             if not process.is_alive():
                 runtime.check()
                 raise ValueError('Local model worker exited before returning a response.')
-    except (OSError, EOFError):
-        # Termination can reset the pipe during either send or receive. Preserve
-        # explicit cancellation rather than misreporting it as a provider error.
-        runtime.check()
-        raise ValueError('Local model worker exited before returning a response.') from None
     finally:
         parent.close()
         child.close()

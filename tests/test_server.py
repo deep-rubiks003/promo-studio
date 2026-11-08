@@ -54,10 +54,15 @@ def test_successful_generation_and_invalid_proposal(tmp_path,monkeypatch):
         time.sleep(.01)
     assert job['status']=='done',job
     export=client.get('/api/projects/'+p['id']+'/export').json()
-    v=export['unranked_variations'][0]
-    jid=client.post('/api/projects/'+p['id']+'/virality-review',headers=headers,json={'variation_id':v['id']}).json()['job_id']
-    from test_new_workflow import finish
-    assert finish(client,jid)['status']=='done'
+    assert not export['ranked_variations'] and export['unranked_variations'][0]['validation']['score'] is None
+    assert 'posting_priority' not in export['unranked_variations'][0]
+    vid=export['unranked_variations'][0]['id']
+    jid=client.post('/api/projects/'+p['id']+'/virality-review',headers=headers,json={'variation_id':vid}).json()['job_id']
+    for _ in range(100):
+        job=client.get('/api/jobs/'+jid).json()
+        if job['status'] in ('done','error'):break
+        time.sleep(.01)
+    assert job['status']=='done',job
     export=client.get('/api/projects/'+p['id']+'/export').json()
     assert export['ranked_variations'][0]['validation']['score']==80
     assert export['ranked_variations'][0]['posting_priority']==1
@@ -110,5 +115,7 @@ def test_resume_reuses_generation_and_completed_review(tmp_path,monkeypatch):
         if job['status'] in ('done','error'):break
         time.sleep(.01)
     assert job['status']=='done',job
-    assert calls==[]  # recovery never starts an optional review
-    assert len(server.load(p['id'])['groups'][0]['variations'])==2
+    assert calls==[]
+    variations=server.load(p['id'])['groups'][0]['variations']
+    assert len(variations)==2
+    assert variations[0]['validation']['score']==80 and variations[1]['validation']['score'] is None

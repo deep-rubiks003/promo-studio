@@ -4,7 +4,6 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import pytest
 from fastapi.testclient import TestClient
 from test_core import SCRIPT
-from prompt_payload import unpack_events
 import server
 
 @pytest.fixture
@@ -131,6 +130,6 @@ def test_spoiler_checker_uses_stitched_playback_order(studio):
         captured.append(prompt)
         return dict(status='clear',summary='No major reveal detected.',findings=[])
     check_spoilers(p,v,[a['id'],b['id']],fake,server.material)
-    events=unpack_events(json.loads(captured[0].split(' PROMO EVENTS:')[1].split(' SELECTED EPISODE CONTEXT:')[0]))
+    events=json.loads(captured[0].split(' PROMO EVENTS:')[1].split(' SELECTED EPISODE CONTEXT:')[0])
     assert events[0]['episode_id']==b['id'] and events[0]['playback_start']==0
     assert next(e for e in events if e['episode_id']==a['id'])['playback_start']==25

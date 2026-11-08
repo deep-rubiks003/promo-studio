@@ -55,7 +55,7 @@ def test_cancel_endpoint_preserves_completed_draft_checkpoint(tmp_path,monkeypat
     with server.db() as c:
         c.executescript('CREATE TABLE projects(id TEXT PRIMARY KEY,body TEXT);CREATE TABLE raw(id TEXT PRIMARY KEY,project_id TEXT,stage TEXT,body TEXT);CREATE TABLE usage(keyhash TEXT PRIMARY KEY,spent REAL);')
     server.state.update(key='private-test-key',keyhash='cancel-test',budget=2)
-    p=server.create({'name':'Checkpoint','files':[{'name':'one.txt','text':SCRIPT}]})
+    p=server.create({'name':'Checkpoint','files':[{'name':'one.txt','text':SCRIPT},{'name':'two.txt','text':SCRIPT.replace('Episode 1','Episode 2')}]})
     ep=p['episodes'][0]
     v=dict(angle='Saved draft',segments=[dict(episode_id=ep['id'],start=0,end=25)],beats=[dict(role=r,event_ids=[ep['events'][i]['id']],reason='Source') for r,i in [('Hook',0),('Context',1),('Escalation',1),('Cliffhanger',2)]],question='What next?')
     original=server.isolated_generate
@@ -63,17 +63,13 @@ def test_cancel_endpoint_preserves_completed_draft_checkpoint(tmp_path,monkeypat
     requests=[]
     def generate(key,model,prompt,options,runtime):
         requests.append(prompt)
-        if prompt.startswith('Create ONE'):
+        if len(requests)==1:
             return {'candidates':[{'content':{'parts':[{'text':json.dumps(dict(title='Saved',promo=v))}]}}]}
         entered.set()
         return original(key,model,prompt,options,runtime,worker=blocking_provider)
     monkeypatch.setattr(server,'isolated_generate',generate)
     client=TestClient(server.app);headers={'X-Studio-Token':server.TOKEN}
-    jid=client.post('/api/projects/'+p['id']+'/generate',headers=headers,json={'selected_ids':[ep['id']]}).json()['job_id']
-    from test_new_workflow import finish
-    assert finish(client,jid)['status']=='done'
-    vid=server.load(p['id'])['groups'][0]['variations'][0]['id']
-    jid=client.post('/api/projects/'+p['id']+'/virality-review',headers=headers,json={'variation_id':vid}).json()['job_id']
+    jid=client.post('/api/projects/'+p['id']+'/generate',headers=headers,json={'selected_ids':[e['id'] for e in p['episodes']],'promo_mode':'multiple'}).json()['job_id']
     assert entered.wait(5)
     deadline=time.monotonic()+10
     while server.runtimes[jid].process is None and time.monotonic()<deadline:time.sleep(.01)
@@ -83,11 +79,11 @@ def test_cancel_endpoint_preserves_completed_draft_checkpoint(tmp_path,monkeypat
     assert result.status_code==200 and result.json()['status']=='cancelled'
     assert not process.is_alive() and jid not in server.active
     saved=server.load(p['id'])
-    assert saved['groups'][0]['variations'][0]['angle']=='Saved draft'
+    assert saved['pending_generation']['groups'][0]['variations'][0]['angle']=='Saved draft'
     assert len(requests)==2  # no retry or later provider stage
     durable=client.get('/api/jobs/'+jid).json()
-    assert durable['operation']=='virality-review'
-    assert [s['status'] for s in durable['stages']]==['cancelled']
+    assert durable['operation']=='generate'
+    assert [s['status'] for s in durable['stages']]==['done','cancelled']
     assert 'private-test-key' not in json.dumps(durable)
     status=client.get('/api/status').json()
     assert status['active_jobs']==[] and status['latest_jobs'][0]['id']==jid

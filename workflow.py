@@ -5,9 +5,8 @@ import json
 import time
 import uuid
 from parser import validate_cut
-from prompt_payload import SOURCE_FORMAT, payload_json, draft_context
 
-DRAFT = '''A promo has angle (short title), distinction (creative intent), segments:[{episode_id,start,end}] in numeric seconds, beats:[{role:"Hook"|"Context"|"Escalation"|"Cliffhanger",event_ids:[exact source event IDs],reason}], question (left unanswered), reason (posting rationale), weakness. Include all four beats in playback order. Hook within first3 seconds. Entire overlapping dialogue turns must fit inside boundaries. Cite only entire events contained in the cut. Do not require a complete emotional arc: select an understandable excerpt with minimal setup, rising tension and an unresolved turn. Stop before the payoff; never extend beyond the duration limit to complete a scene. Follow ONE causal conflict; do not stitch unrelated subplots merely to include all assigned episodes. An assigned source pool is permission, not a requirement to use every episode. Include source lines that connect any scene change. Leave the final conflict unresolved within the included dialogue. Do not invent or rewrite dialogue, voiceovers, events or timestamps. Continuous means exactly one segment; stitched permits up to8 ordered ranges. Respect the requested 20–60 second duration. Produce exactly ONE draft, never alternatives or variations. If no supported cut exists return {error:string}.'''
+DRAFT = '''A promo has angle (short title), distinction (creative intent), segments:[{episode_id,start,end}] in numeric seconds, beats:[{role:"Hook"|"Context"|"Escalation"|"Cliffhanger",event_ids:[exact source event IDs],reason}], question (left unanswered), reason (posting rationale), weakness. Include all four beats in playback order. Hook within first3 seconds. Entire overlapping dialogue turns must fit inside boundaries. Cite only entire events contained in the cut. Create a coherent mini-story understandable without other episodes. Follow ONE causal conflict; do not stitch unrelated subplots merely to include all assigned episodes. An assigned source pool is permission, not a requirement to use every episode. Include source lines that connect any scene change. Leave the final conflict unresolved within the included dialogue. Do not invent or rewrite dialogue, voiceovers, events or timestamps. Continuous means exactly one segment; stitched permits up to8 ordered ranges. Respect the requested 20–60 second duration. Produce exactly ONE draft, never alternatives or variations. If no supported cut exists return {error:string}.'''
 
 def build_brief(p,body):
     ids=body.get('selected_ids');known={e['id'] for e in p['episodes']}
@@ -87,43 +86,7 @@ def normalize_sources(v, episodes, ids):
 
 def rejected_checks(v):
     reasons=[c['name']+': '+c['detail'] for c in v.get('validation',{}).get('checks',[]) if not c['passed']]
-    reasons += ['Reviewer: '+v['review_notes']] if v.get('review_notes') else []
-    reasons += ['Story assessment failed: '+k for k,value in (v.get('narrative') or {}).items() if value is False]
     return reasons
-
-EDITORIAL_BRIEF = """Select existing show moments for a newcomer scrolling Instagram, TikTok or YouTube; do not summarize or write a trailer. No editing, music, text overlays, invented voiceover or rewritten dialogue/events/timestamps.
-Compare plausible openings/endings. Do not require a complete emotional arc: select an understandable excerpt with minimal setup, rising tension and an unresolved turn. Stop before the payoff; never extend beyond the duration limit to complete a scene. Prefer continuous when equally strong; stitch only source-connected moments with intelligible transitions, never unrelated subplots. The assigned pool permits but does not require every episode.
-Apply this rubric while choosing the FIRST draft:
-- Hook (25%): a specific audible line or visible action earns attention in the first 3 seconds; avoid slow setup. A slap, reveal or shocking line is an example, not mandatory.
-- Standalone clarity (25%): include only the relationships, stakes and conflict needed to understand THIS moment; omit backstory. Explanations and unseen episodes cannot fill gaps.
-- Escalation (15%): the situation develops after the hook; stakes rise or expectations reverse. Avoid static quote collections.
-- Cliffhanger (25%): end at a meaningful unresolved turn, threat, decision or revelation, before its consequence/answer. Metadata cannot create suspense already resolved in the clip.
-- Cut quality (10%): intelligible start/end, complete dialogue turns across ALL overlapping tracks, preserved meaning/causal order, no misleading joins. Each timestamped dialogue block is independent; adjacent blocks by the same speaker need not remain together.
-Check boundaries and duration BEFORE returning: continuous=exactly one segment; stitched=up to 8 ordered segments. Total duration is SUM(end-start), not last-source-time minus first-source-time; fit the brief within 20–60 seconds. Rechoose a window instead of shortening spoken sentences.
-Cite four ordered beats: Hook, Context, Escalation, Cliffhanger, using exact source event IDs fully contained in their segments. Hook evidence begins within 3 seconds of playback. Every transition must make sense to a stranger.
-Return {error:string} only if no supported cut exists. Never self-award validation, narrative approval or rubric scores; an independent reviewer judges the actual clip.
-"""
-
-DRAFT_OUTPUT = ' Return JSON {title,opportunity,promo:{angle,distinction,segments:[{episode_id,start,end}],beats:[{role,event_ids,reason}],question,reason,weakness}}. Beat reasons explain hook/cliffhanger source evidence; distinction is creative intent; question stays unanswered; reason is posting rationale; weakness is an honest tradeoff.'
-SOURCE_IDS = ' episode_id MUST be the exact source episode_id (or id) string, NEVER an episode number. event_ids MUST be exact listed IDs. Return exactly ONE draft, never variations.'
-
-
-def generation_prompt(scoped,selected,material,repair=None):
-    feedback=(' Replace this rejected draft and address its review_feedback: '+payload_json(draft_context(repair))) if repair else ''
-    return ('Create ONE promo from this assigned source pool. '+EDITORIAL_BRIEF+DRAFT_OUTPUT+SOURCE_IDS+
-            feedback+SOURCE_FORMAT+' Brief:'+payload_json(scoped)+' ONLY SOURCE:'+payload_json(material(selected)))
-
-
-def refinement_prompt(old,brief,selected,material,part,direction):
-    return ('Propose an existing-source recut. Return ONE JSON object with exactly these outer keys: variation, change, tradeoff. '
-            'variation MUST be a nested OBJECT, never a title string; all cut fields belong inside it. '
-            'Shape (illustrative times only; use actual source bounds): '+payload_json(REFINEMENT_FORMAT)+' '+
-            EDITORIAL_BRIEF+SOURCE_IDS+' Preserve untargeted parts where possible. Address current review_feedback, '
-            'especially failed source/story checks. If the direction lacks source support, explain the tradeoff or return error; never invent. '+
-            SOURCE_FORMAT+' Target:'+str(part)+' Request:'+str(direction)+' Current:'+payload_json(draft_context(old))+
-            ' Brief:'+payload_json({k:brief[k] for k in ('minimum','maximum','structure','emphasis','selected_ids') if k in brief})+
-            ' Source:'+payload_json(material(selected)))
-
 
 def generate_promos(p,brief,job,call,review,save,material,resume=False):
     pending=p.get('pending_generation') if resume else None
@@ -138,7 +101,10 @@ def generate_promos(p,brief,job,call,review,save,material,resume=False):
         def candidate(repair=None):
             stage='candidate-repair' if repair else 'candidate-generation'
             job['message']=f'{"Repairing" if repair else "Drafting"} promo {i+1} of {len(brief["episode_groups"])}'
-            result=call(p['id'],stage,generation_prompt(scoped,selected,material,repair))
+            instruction='Create ONE promo from this assigned source pool. '
+            if repair:
+                instruction+='Replace the rejected draft with ONE corrected cut. Failed checks: '+json.dumps(rejected_checks(repair))+' Previous draft: '+json.dumps(repair)+' '
+            result=call(p['id'],stage,instruction+'Return JSON {title,opportunity,promo:promo}. '+DRAFT+' episode_id MUST be the exact string episode_id (or id) from ONLY SOURCE, NEVER the episode number. Every event_id must be an exact listed event ID. Continuous MUST have exactly ONE segment. Check end-start and total duration against Brief before responding. Brief:'+json.dumps(scoped)+' ONLY SOURCE:'+json.dumps(material(selected),ensure_ascii=False))
             if result.get('error'):result=dict(title=f'Promo {i+1}',promo=dict(angle=f'Promo {i+1} — no supported cut',segments=[],beats=[],question='',weakness=str(result['error'])))
             v=result.get('promo')
             if not isinstance(v,dict):
@@ -153,20 +119,8 @@ def generate_promos(p,brief,job,call,review,save,material,resume=False):
             result,v=candidate()
             groups.append(dict(id=uuid.uuid4().hex,title=str(result.get('title') or v.get('angle') or f'Promo {i+1}'),opportunity=str(result.get('opportunity','')),source_ids=ids,variations=[v]));save(p)
         v=groups[i]['variations'][0]
-        if v.get('review_status') not in ('reviewed','needs_repair','unreviewed'):
-            job['message']=f'Reviewing promo {i+1} of {len(brief["episode_groups"])}'
-            normalize_sources(v,p['episodes'],ids)
-            review(p,v,scoped)
-            v['review_status']=v.get('review_status') if v.get('review_status')=='unreviewed' else ('reviewed' if v.get('narrative') and v.get('rubric') else 'needs_repair');save(p)
-        if resume and len(brief['episode_groups'])==1 and not v.get('validation',{}).get('eligible'):
-            # One correction attempt per group per explicit run; never spin on rejection.
-            result,repaired=candidate(v)
-            history=groups[i].setdefault('rejected_drafts',[]);history.append(copy.deepcopy(v))
-            groups[i]['rejected_drafts']=history[-5:]
-            groups[i]['variations']=[repaired];save(p)
-            job['message']=f'Checking repaired promo {i+1} of {len(brief["episode_groups"])}'
-            review(p,repaired,scoped)
-            repaired['review_status']=repaired.get('review_status') if repaired.get('review_status')=='unreviewed' else ('reviewed' if repaired.get('narrative') and repaired.get('rubric') else 'needs_repair');save(p)
+        normalize_sources(v,p['episodes'],ids)
+        check_only(p,v,scoped,clear=False);save(p)
     if p.get('groups'):
         p['previous_generation']=dict(groups=copy.deepcopy(p['groups']),brief=copy.deepcopy(p.get('brief')),saved_at=time.time())
     p['generation_summary']=dict(total=len(groups),passed=sum(bool(g['variations'][0]['validation']['eligible']) for g in groups),needs_repair=sum(not g['variations'][0]['validation']['eligible'] for g in groups))
@@ -190,7 +144,7 @@ def check_all_spoilers(p,call,material):
     for g,v in drafts:
         _,_,clip=spoiler_source(p,v,scope(g))
         inputs.append(dict(promo_id=v['id'],source_ids=scope(g),question=v.get('question'),segments=v['segments'],beats=v.get('beats',[]),ordered_events=clip))
-    result=call(p['id'],'spoiler-check','Check ALL final promo drafts together in ONE assessment. For each draft use ONLY its source_ids; other promos are not evidence about its story. Distinguish necessary premises from exposed outcomes, twists, identity reveals and answered cliffhangers. Follow each draft playback order. Do not invent future or unselected context. Return JSON {results:[{promo_id,status:"clear"|"warning"|"inconclusive",summary,findings:[{severity:"high"|"medium"|"low",kind,event_ids:[exact IDs including evidence IN THAT PROMO],explanation,suggestion}]}]}. Return exactly one result per promo.'+SOURCE_FORMAT+' FINAL PROMOS:'+payload_json(inputs)+' SOURCE CONTEXT (deduplicated):'+payload_json(material(episodes)))
+    result=call(p['id'],'spoiler-check','Check ALL final promo drafts together in ONE assessment. For each draft use ONLY its source_ids; other promos are not evidence about its story. Distinguish necessary premises from exposed outcomes, twists, identity reveals and answered cliffhangers. Follow each draft playback order. Do not invent future or unselected context. Return JSON {results:[{promo_id,status:"clear"|"warning"|"inconclusive",summary,findings:[{severity:"high"|"medium"|"low",kind,event_ids:[exact IDs including evidence IN THAT PROMO],explanation,suggestion}]}]}. Return exactly one result per promo. FINAL PROMOS:'+json.dumps(inputs,ensure_ascii=False)+' SOURCE CONTEXT (deduplicated):'+json.dumps(material(episodes),ensure_ascii=False))
     rows=result.get('results')
     if not isinstance(rows,list) or any(not isinstance(r,dict) or not isinstance(r.get('promo_id'),str) for r in rows):raise ValueError('Incomplete batch spoiler response; previous checks are preserved.')
     byid={r['promo_id']:r for r in rows}
@@ -216,7 +170,7 @@ def spoiler_source(p,v,ids):
 def check_spoilers(p,v,ids,call,material):
     episodes,events,clip=spoiler_source(p,v,ids)
     clipids={e['id'] for e in clip}
-    result=call(p['id'],'spoiler-check','Act as a Spoiler checker after a promo draft. Use ONLY assigned selected episodes. Distinguish a necessary premise/hook from a major twist, identity reveal, outcome, or resolution that gives away the reason to watch. Check whether the draft itself answers its promised unanswered question. Do not flag every conflict reveal as a spoiler. Do not infer anything from unselected or future episodes. Judge the draft in the listed segment/playback order, not episode order; source timestamps and playback timestamps are separate. This is editorial risk assessment, never a guarantee. Return JSON {status:"clear"|"warning"|"inconclusive",summary:string,findings:[{severity:"high"|"medium"|"low",kind:string,event_ids:[exact IDs including evidence IN THE PROMO],explanation:string,suggestion:string}]}. No new dialogue. Draft question:'+str(v.get('question',''))+' ORDERED SEGMENTS AND BEATS:'+payload_json(dict(segments=v['segments'],beats=v.get('beats',[])))+SOURCE_FORMAT+' PROMO EVENTS:'+payload_json(clip)+' SELECTED EPISODE CONTEXT:'+payload_json(material(episodes)))
+    result=call(p['id'],'spoiler-check','Act as a Spoiler checker after a promo draft. Use ONLY assigned selected episodes. Distinguish a necessary premise/hook from a major twist, identity reveal, outcome, or resolution that gives away the reason to watch. Check whether the draft itself answers its promised unanswered question. Do not flag every conflict reveal as a spoiler. Do not infer anything from unselected or future episodes. Judge the draft in the listed segment/playback order, not episode order; source timestamps and playback timestamps are separate. This is editorial risk assessment, never a guarantee. Return JSON {status:"clear"|"warning"|"inconclusive",summary:string,findings:[{severity:"high"|"medium"|"low",kind:string,event_ids:[exact IDs including evidence IN THE PROMO],explanation:string,suggestion:string}]}. No new dialogue. Draft question:'+str(v.get('question',''))+' ORDERED SEGMENTS AND BEATS:'+json.dumps(dict(segments=v['segments'],beats=v.get('beats',[])))+' PROMO EVENTS:'+json.dumps(clip,ensure_ascii=False)+' SELECTED EPISODE CONTEXT:'+json.dumps(material(episodes),ensure_ascii=False))
     if result.get('status') not in ('clear','warning','inconclusive') or not isinstance(result.get('findings'),list) or not isinstance(result.get('summary'),str):raise ValueError('Spoiler checker returned an incomplete response. Previous check is preserved.')
     findings=[];unverified=False
     for f in result['findings']:
@@ -226,3 +180,65 @@ def check_spoilers(p,v,ids,call,material):
         findings.append(dict(severity=f.get('severity') if f.get('severity') in ('high','medium','low') else 'medium',kind=str(f.get('kind','Possible spoiler')),explanation=str(f.get('explanation','')),suggestion=str(f.get('suggestion','')),event_ids=cited,events=[events[i] for i in cited]))
     status='inconclusive' if unverified else 'warning' if findings else 'inconclusive' if result['status']!='clear' else 'clear'
     return dict(status=status,summary=result['summary'],findings=findings,source_ids=ids,draft_fingerprint=fingerprint(v),checked_at=time.time(),limitation='AI assessment against the assigned selected episodes only. Unselected episodes and footage are not checked.')
+
+
+def clear_review(v):
+    """A changed cut cannot inherit its previous optional assessments."""
+    for key in ('narrative','rubric','review_notes','review_status','spoiler_check','rating','posting_priority'):
+        v.pop(key,None)
+    return v
+
+
+def check_only(p,v,brief,clear=True):
+    if clear:clear_review(v)
+    normalize_sources(v,p['episodes'],brief['selected_ids'])
+    v['validation']=validate_cut(v,p['episodes'],brief['selected_ids'],brief['minimum'],brief['maximum'],brief['structure'])
+    if clear or v.get('review_status') not in ('reviewed','unreviewed'):
+        v['review_status']='unreviewed' if v['validation']['eligible'] else 'needs_repair'
+    return v
+
+
+def repair_selection(p,variation_ids):
+    """Validate the entire selection before a paid batch can start."""
+    if not isinstance(variation_ids,list) or not variation_ids or any(not isinstance(i,str) for i in variation_ids) or len(set(variation_ids))!=len(variation_ids):
+        raise ValueError('Select distinct failed promo drafts to repair.')
+    selected=[]
+    for vid in variation_ids:
+        group,v=locate(p,vid)
+        brief={k:p['brief'][k] for k in ('minimum','maximum','structure','emphasis') if k in p['brief']}
+        brief['selected_ids']=group.get('source_ids',p['brief']['selected_ids'])
+        validation=validate_cut(v,p['episodes'],brief['selected_ids'],brief['minimum'],brief['maximum'],brief['structure'])
+        if validation['eligible']:raise ValueError('Only drafts that fail local cut checks can be selected for repair.')
+        if vid in p.get('proposals',{}):raise ValueError('Decide on the pending proposal before repairing this draft again.')
+        selected.append((group,v,brief,validation))
+    return selected
+
+
+def manual_bulk_repair(p,variation_ids,job,call,save,material):
+    selected=repair_selection(p,variation_ids)
+    batch=dict(variation_ids=list(variation_ids),items=[],status='running');p['manual_repair_batch']=batch;save(p)
+    for index,(group,old,brief,validation) in enumerate(selected):
+        item=dict(variation_id=old['id'],status='running');batch['items'].append(item);save(p)
+        job['message']=f'Proposing repair {index+1} of {len(selected)}'
+        previous=copy.deepcopy(old);previous['validation']=validation
+        scoped=[e for e in p['episodes'] if e['id'] in brief['selected_ids']]
+        try:
+            result=call(p['id'],'manual-repair-proposal','Repair ONE failed promo using ONLY this assigned source pool. Return {variation:OBJECT,change:string,tradeoff:string}. '+DRAFT+' Shape:'+json.dumps(REFINEMENT_FORMAT)+' Failed LOCAL checks:'+json.dumps(rejected_checks(previous))+' Current:'+json.dumps(previous)+' Brief:'+json.dumps(brief)+' ONLY SOURCE:'+json.dumps(material(scoped),ensure_ascii=False))
+            proposal=normalize_refinement(result);v=proposal['variation'];v['id']=old['id'];check_only(p,v,brief)
+            proposal.update(status='pending',origin='manual_bulk_repair',created_at=time.time())
+            p.setdefault('proposals',{})[old['id']]=proposal
+            item.update(status='proposed',eligible=v['validation']['eligible'])
+            save(p)
+        except Exception as exc:
+            # Provider, budget and cancellation failures stop immediately; schema
+            # failures belong to this draft and allow the remaining batch to run.
+            from job_runtime import JobCancelled
+            stop=isinstance(exc,JobCancelled) or hasattr(exc,'http_status') or any(t in str(exc).lower() for t in ('spending limit','quota','authentication','api key','cancelled','connection'))
+            stages=copy.deepcopy(job.get('stages',[]))
+            if stages and stages[-1].get('status')=='running':
+                stages[-1].update(status='error',error=str(exc),finished_at=time.time());job['stages']=stages
+            item.update(status='paused' if stop else 'failed',error=str(exc));batch['status']='paused' if stop else 'running'
+            if isinstance(exc,JobCancelled):raise
+            save(p)
+            if stop:raise
+    batch['status']='done';save(p)

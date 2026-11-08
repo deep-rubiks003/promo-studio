@@ -17,37 +17,29 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak, 
 from parser import validate_cut
 from workflow import fingerprint
 
-PAPER = colors.HexColor('#FBF8F2')
-INK = colors.HexColor('#292824')
-MUTED = colors.HexColor('#68665F')
-APRICOT = colors.HexColor('#EFAD85')
-RULE = colors.HexColor('#DED7CC')
+PAPER = colors.HexColor('#FFFFFF')
+INK = colors.HexColor('#182532')
+MUTED = colors.HexColor('#52606D')
+AMBER = colors.HexColor('#F59E0B')
+RULE = colors.HexColor('#DCE2E7')
 _FONT_LOCK = threading.Lock()
 
 
 def _fonts():
-    """Embed system fonts, including an Indic fallback on Windows; no downloads."""
-    windir = Path(os.environ.get('WINDIR', 'C:/Windows')) / 'Fonts'
-    candidates = [
-        (windir / 'arial.ttf', windir / 'arialbd.ttf'),
-        (Path('/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'), Path('/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf')),
-        (Path('/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf'), Path('/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf')),
-        (Path('/Library/Fonts/Arial.ttf'), Path('/Library/Fonts/Arial Bold.ttf')),
-    ]
-    # A portable installation may ship its own openly licensed TTF pair here.
-    local = Path(__file__).parent / 'fonts'
-    candidates.insert(0, (local / 'DejaVuSans.ttf', local / 'DejaVuSans-Bold.ttf'))
+    """Embed the bundled Roboto pair; PDF generation is fully offline."""
+    local=Path(__file__).parent/'fonts'
+    windir=Path(os.environ.get('WINDIR','C:/Windows'))/'Fonts'
     with _FONT_LOCK:
         if 'PromoBody' not in pdfmetrics.getRegisteredFontNames():
-            pair = next(((a, b) for a, b in candidates if a.is_file() and b.is_file()), None)
-            if pair is None:
-                raise RuntimeError('PDF export needs Arial or DejaVu Sans TrueType fonts. Install DejaVu Sans or place DejaVuSans.ttf and DejaVuSans-Bold.ttf in the app fonts folder.')
-            pdfmetrics.registerFont(TTFont('PromoBody', str(pair[0])))
-            pdfmetrics.registerFont(TTFont('PromoBold', str(pair[1])))
-            pdfmetrics.registerFontFamily('PromoBody', normal='PromoBody', bold='PromoBold')
-            for path in [windir / 'Nirmala.ttf', Path('/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf')]:
+            regular,bold=local/'Roboto-Regular.ttf',local/'Roboto-Bold.ttf'
+            if not regular.is_file() or not bold.is_file():
+                raise RuntimeError('PDF export requires the bundled Roboto Regular and Bold font files in the app fonts folder.')
+            pdfmetrics.registerFont(TTFont('PromoBody',str(regular)))
+            pdfmetrics.registerFont(TTFont('PromoBold',str(bold)))
+            pdfmetrics.registerFontFamily('PromoBody',normal='PromoBody',bold='PromoBold')
+            for path in [windir/'Nirmala.ttf',Path('/usr/share/fonts/truetype/noto/NotoSansDevanagari-Regular.ttf')]:
                 if path.is_file():
-                    pdfmetrics.registerFont(TTFont('PromoFallback', str(path)))
+                    pdfmetrics.registerFont(TTFont('PromoFallback',str(path)))
                     break
 
 
@@ -92,24 +84,24 @@ class SourceTimeline(Flowable):
     def __init__(self, segments):
         super().__init__()
         self.durations=[s['end']-s['start'] for s in segments if isinstance(s,dict) and _finite(s.get('start')) and _finite(s.get('end')) and s['end']>s['start']]
-        self.height=46
+        self.height=56
     def wrap(self,availWidth,availHeight):
         self.width=availWidth
         return availWidth,self.height
     def draw(self):
         c=self.canv;total=sum(self.durations)
         if not total:return
-        c.setFillColor(MUTED);c.setFont('PromoBody',8)
-        c.drawString(0,35,'ORDERED PLAYBACK / CUT LENGTHS TO SCALE')
+        c.setFillColor(MUTED);c.setFont('PromoBody',9)
+        c.drawString(0,44,'Playback order / source cuts to scale')
         x=0
         for index,duration in enumerate(self.durations):
             width=self.width*duration/total
-            c.setFillColor(APRICOT if index%2==0 else RULE)
+            c.setFillColor(AMBER if index%2==0 else RULE)
             c.rect(x,12,max(width-2,1),15,stroke=0,fill=1)
             if width>30:
                 c.setFillColor(INK);c.setFont('PromoBold',8);c.drawString(x+5,17,str(index+1))
             x+=width
-        c.setFillColor(MUTED);c.setFont('PromoBody',8)
+        c.setFillColor(MUTED);c.setFont('PromoBody',9)
         c.drawString(0,0,'00:00.00');c.drawRightString(self.width,0,_tc(total))
 
 
@@ -122,14 +114,14 @@ def build_pdf(project):
     _fonts()
     output = BytesIO()
     styles = {
-        'eyebrow': ParagraphStyle('eyebrow', fontName='PromoBold', fontSize=9, leading=13, textColor=MUTED, spaceAfter=12),
-        'title': ParagraphStyle('title', fontName='PromoBold', fontSize=30, leading=35, textColor=INK, spaceAfter=18, splitLongWords=True),
-        'h1': ParagraphStyle('h1', fontName='PromoBold', fontSize=24, leading=29, textColor=INK, spaceAfter=14),
-        'h2': ParagraphStyle('h2', fontName='PromoBold', fontSize=14, leading=19, textColor=INK, spaceBefore=16, spaceAfter=8, keepWithNext=True),
-        'label': ParagraphStyle('label', fontName='PromoBold', fontSize=9, leading=13, textColor=MUTED, spaceBefore=6, spaceAfter=3, keepWithNext=True),
-        'body': ParagraphStyle('body', fontName='PromoBody', fontSize=10, leading=15, textColor=INK, spaceAfter=6, splitLongWords=True, alignment=TA_LEFT),
-        'small': ParagraphStyle('small', fontName='PromoBody', fontSize=8.5, leading=12, textColor=MUTED, spaceAfter=5, splitLongWords=True),
-        'quote': ParagraphStyle('quote', fontName='PromoBody', fontSize=11, leading=17, textColor=INK, leftIndent=13, rightIndent=10, borderColor=APRICOT, borderWidth=0, borderPadding=0, spaceAfter=13, splitLongWords=True),
+        'eyebrow': ParagraphStyle('status',fontName='PromoBold',fontSize=10,leading=15,textColor=MUTED,spaceAfter=14),
+        'title': ParagraphStyle('title',fontName='PromoBold',fontSize=32,leading=38,textColor=INK,spaceAfter=18,splitLongWords=True,keepWithNext=True),
+        'h1': ParagraphStyle('h1',fontName='PromoBold',fontSize=26,leading=32,textColor=INK,spaceAfter=14,keepWithNext=True),
+        'h2': ParagraphStyle('h2',fontName='PromoBold',fontSize=15,leading=21,textColor=INK,spaceBefore=23,spaceAfter=11,keepWithNext=True),
+        'label': ParagraphStyle('label',fontName='PromoBold',fontSize=10,leading=15,textColor=INK,spaceBefore=11,spaceAfter=5,keepWithNext=True),
+        'body': ParagraphStyle('body',fontName='PromoBody',fontSize=11,leading=17,textColor=INK,spaceAfter=10,splitLongWords=True,alignment=TA_LEFT),
+        'small': ParagraphStyle('small',fontName='PromoBody',fontSize=9.5,leading=14,textColor=MUTED,spaceAfter=7,splitLongWords=True),
+        'quote': ParagraphStyle('quote',fontName='PromoBody',fontSize=12,leading=19,textColor=INK,leftIndent=12,rightIndent=35,spaceBefore=3,spaceAfter=17,splitLongWords=True),
     }
     styles['body_keep'] = ParagraphStyle('body_keep', parent=styles['body'], keepWithNext=True)
     story = []
@@ -154,11 +146,11 @@ def build_pdf(project):
             reviewed = _reviewed(draft)
             review_input = draft if reviewed else dict(draft, narrative={}, rubric=[])
             valid = validate_cut(review_input, episodes, group.get('source_ids', brief.get('selected_ids', [])), brief.get('minimum', 20), brief.get('maximum', 60), brief.get('structure', 'continuous'))
-            label = 'Review pending' if not reviewed else 'Eligible' if valid['eligible'] else 'Needs changes'
+            label = 'Needs changes' if not valid['eligible'] else 'Eligible' if reviewed else 'Review pending'
             records.append((group, draft, valid, label))
 
     add(project.get('name') or 'Promo collection', 'title')
-    story.append(HRFlowable(width='100%', thickness=3, color=APRICOT, spaceAfter=18))
+    story.append(HRFlowable(width='100%', thickness=1, color=RULE, spaceAfter=20))
     add(f'{len(records)} promo drafts / {sum(r[3] == "Eligible" for r in records)} eligible / {sum(r[3] == "Needs changes" for r in records)} need changes / {sum(r[3] == "Review pending" for r in records)} awaiting review')
     field('Cut brief', f'{str(brief.get("structure", "continuous")).capitalize()} / requested {brief.get("minimum", 20)}-{brief.get("maximum", 60)} seconds')
     if brief.get('emphasis'):
@@ -171,6 +163,13 @@ def build_pdf(project):
     heading('Read before cutting')
     add('Source timestamps refer to the original episode. Promo timestamps refer to playback after the ordered cuts are assembled. Dialogue below is copied from the source script; editorial descriptions are separate.')
     add('Script timestamps are estimates. Verify footage, audio sync and boundaries before editing. Editorial scores are rubric assessments, not viral probabilities. Unchecked spoilers are not cleared. This PDF is rendered locally from saved data; no new AI review is performed.', 'small')
+    episode_results=(project.get('discovery_report') or {}).get('episode_results',[])
+    if episode_results:
+        missing=[row for row in episode_results if not row.get('draft')]
+        heading('Episode accounting')
+        add(f'{len(episode_results)} episodes / {len(records)} available source drafts / {len(missing)} with no usable returned draft.')
+        for row in missing:
+            add(f'Episode {row.get("number", row.get("episode_number", "?"))} / {row.get("status", "needs_repair")} / '+ '; '.join(row.get('reasons') or ['No usable source draft returned; try episode repair.']), 'small')
     heading('Draft index')
     if not records:
         add('No promo drafts are available to export.')
@@ -180,15 +179,19 @@ def build_pdf(project):
     for index, (group, draft, valid, label) in enumerate(records, 1):
         story.append(PageBreak())
         add(f'{index:02} / '+(draft.get('angle') or group.get('title') or 'Untitled promo'), 'h1')
-        story.append(HRFlowable(width='100%', thickness=3, color=APRICOT, spaceAfter=12))
+        story.append(HRFlowable(width='100%', thickness=1, color=RULE, spaceAfter=14))
         add(f'{label.upper()} / {valid["duration"]:.2f} seconds / {brief.get("structure", "continuous")}', 'eyebrow')
         if label == 'Review pending':
             add('Draft saved; editorial review has not completed. No score or approval is available.', 'small')
         elif valid.get('rubric_score') is not None:
             add(f'Editorial rubric: {valid["rubric_score"]}/100. Approval: {label}. Spoiler review is reported separately.', 'small')
         story.append(SourceTimeline(draft.get('segments') or []))
+        if group.get('posting_priority') is not None:
+            field('Posting priority', '#'+str(group['posting_priority'])+' / '+label)
+            field('Ranking reason', group.get('posting_reason') or 'Review the cut checks before posting.')
         field('Creative intent', draft.get('distinction'))
         field('Posting rationale', draft.get('reason') or group.get('opportunity'))
+        field('Unanswered question', draft.get('question'))
         heading('Ordered source cuts and original dialogue')
         offset = 0
         for cut, segment in enumerate(draft.get('segments') or [], 1):
@@ -225,7 +228,6 @@ def build_pdf(project):
             for event in beat['events']:
                 ep = next((ep for ep in episodes if any(x['id'] == event['id'] for x in ep['events'])), None)
                 add(f'Episode {ep["number"] if ep else "?"} / source {_tc(event["start"])} - {_tc(event["end"])} / {event["speaker"]} / event {event["id"]}', 'small')
-        field('Unanswered question', draft.get('question'))
         heading('Checks / editorial review')
         for check in valid['checks']:
             add(f'{"PASS" if check["passed"] else "FAIL"} / {check["name"]}', 'label')
@@ -267,15 +269,15 @@ def build_pdf(project):
         canvas.setFillColor(PAPER)
         canvas.rect(0, 0, width, height, stroke=0, fill=1)
         canvas.setStrokeColor(RULE)
-        canvas.line(48, height - 36, width - 48, height - 36)
-        canvas.line(48, 37, width - 48, 37)
+        canvas.line(60, height - 40, width - 60, height - 40)
+        canvas.line(60, 40, width - 60, 40)
         canvas.setFont('PromoBody', 8)
         canvas.setFillColor(MUTED)
-        canvas.drawString(48, height - 27, 'PROMO STUDIO / SOURCE CUT COLLECTION')
-        canvas.drawString(48, 24, 'EDITOR HANDOFF / SCRIPT TIMING REQUIRES FOOTAGE VERIFICATION')
-        canvas.drawRightString(width - 48, 24, f'{doc.page:02}')
+        canvas.drawString(60, height - 29, 'PROMO STUDIO / SOURCE CUT COLLECTION')
+        canvas.drawString(60, 25, 'EDITOR HANDOFF / SCRIPT TIMING REQUIRES FOOTAGE VERIFICATION')
+        canvas.drawRightString(width - 60, 25, f'{doc.page:02}')
         canvas.restoreState()
 
-    doc = SimpleDocTemplate(output, pagesize=A4, leftMargin=48, rightMargin=48, topMargin=57, bottomMargin=55, title=str(project.get('name') or 'Promo Studio editor handoff'), author='Promo Studio', pageCompression=1)
+    doc = SimpleDocTemplate(output, pagesize=A4, leftMargin=60, rightMargin=60, topMargin=66, bottomMargin=64, title=str(project.get('name') or 'Promo Studio editor handoff'), author='Promo Studio', pageCompression=1)
     doc.build(story, onFirstPage=page, onLaterPages=page)
     return output.getvalue()

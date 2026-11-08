@@ -24,8 +24,7 @@ def test_discovery_is_additive_and_preview_is_local(tmp_path,monkeypatch):
     assert client.post('/api/projects/'+p['id']+'/discovery',json=body,headers=headers).status_code==400
     assert 'discovery_runs' not in server.load(p['id'])
     monkeypatch.setitem(server.state,'key','mock-only')
-    def fake_run(project,run,call,save,material,**kwargs):
-        assert kwargs['review_enabled'] is False
+    def fake_run(project,run,call,save,material):
         run.update(status='done',shortlist=[],coverage=[],rejections=[])
     monkeypatch.setattr(server,'run_discovery',fake_run)
     result=client.post('/api/projects/'+p['id']+'/discovery',json=body,headers=headers)
