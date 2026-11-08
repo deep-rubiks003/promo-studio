@@ -281,12 +281,13 @@
             <span>Promo</span>
             <select id="group-select"></select>
           </label>
-          <button id="repair-failed" class="button secondary" type="button" hidden>Repair failed promos</button><button id="review-pending-repairs" class="quiet" type="button" hidden>Review saved repairs</button><a class="button secondary" id="export" href="#" download>Download all cuts · PDF</a>
+          <button id="review-many" class="button secondary" type="button">Review multiple promos</button><button id="repair-failed" class="button secondary" type="button" hidden>Repair failed promos</button><button id="review-pending-repairs" class="quiet" type="button" hidden>Review saved repairs</button><a class="button secondary" id="export" href="#" download>Download all cuts · PDF</a>
           <a class="button secondary" id="handoff-export" href="#" download>Print handoff</a>
           <a class="quiet" id="json-export" href="#" download>Source data</a>
         </div>
       </div>
 
+      <p id="review-batch-notice" class="small" role="status" aria-live="polite" hidden></p>
       <section id="live-episode-progress" class="live-episode-progress" hidden tabindex="-1" aria-labelledby="live-progress-title"><div class="live-progress-heading"><div><span class="eyebrow">Full-show scan</span><h2 id="live-progress-title">Your episodes, coming to life.</h2></div><strong id="live-progress-count" role="status" aria-live="polite"></strong></div><div class="scan-progress-track"><div id="live-progress-fill"></div></div><div id="live-episode-map" class="discovery-episode-map" aria-label="Live episode progress"></div><p class="small">Green: source scan complete · Amber: processing · Red: source window failed. Cut quality is shown separately below.</p></section>
       <div id="studio-empty" class="empty-state" hidden>
         <h2>No eligible cuts yet.</h2>
@@ -452,7 +453,8 @@
   <noscript>
     <p class="global-error">Enable JavaScript to import scripts and use this local studio.</p>
   </noscript>
-  <script src="/static/app.js?v=repair-choice-20261109" defer></script>
+  <script src="/static/app.js?v=bulk-review-20261109" defer></script>
 <dialog id="discovery-preview" class="scan-plan-dialog" aria-labelledby="discovery-preview-title"><div class="scan-plan-heading"><span class="eyebrow">Before the first call</span><button id="close-discovery-preview" type="button" class="quiet" aria-label="Close scan plan">Close</button></div><h3 id="discovery-preview-title">Your scan plan</h3><div id="discovery-preview-details"></div><p id="discovery-budget-warning" class="discovery-budget-warning" role="status"></p><p class="small">Provider quotas and the spending limit still apply. Saved batches survive interruption; unfinished coverage stays visible.</p><button class="button primary" id="start-discovery" type="button">Find & rank promos</button><p class="small">Sends all uploaded episodes in bounded batches to your connected model.</p><p id="scan-plan-error" class="error" role="alert"></p></dialog>
+<dialog id="review-picker" class="repair-picker" aria-labelledby="review-picker-title"><div class="repair-picker-heading"><h2 id="review-picker-title">Choose promos to review</h2><button id="review-picker-close" type="button" class="quiet">Close</button></div><p class="small">Review your current saved drafts, including cuts with warnings. Each selected promo uses a separate request, run one after another. Completed scores stay saved if you stop or quota runs out. Pending repair proposals are not reviewed until you keep them.</p><label class="repair-picker-all"><input id="review-pick-all" type="checkbox"> Select all promos</label><div id="review-picker-list" class="repair-picker-list"></div><p id="review-picker-error" class="error" role="alert"></p><button id="review-selected" type="button" class="button primary" disabled>Review selected promos</button></dialog>
 </body>
 </html>

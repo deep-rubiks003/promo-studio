@@ -47,6 +47,7 @@ async function watchJob(id){
   if(result.status==='error'){const failure=Error(result.error||result.message);failure.operation=result.operation;failure.resumeGeneration=['generate','resume_generation'].includes(result.operation);if(['discovery','resume_discovery','discovery_episode_repair','discovery_episode_repairs','discovery_episode_review'].includes(result.operation))failure.discoveryRunId=result.run_id||result.discovery_run_id||activeDiscoveryRun;if(result.operation==='discovery_spoilers')failure.discoverySpoilerRunId=result.run_id||result.discovery_run_id||activeDiscoveryRun;throw failure;}
 
   if(['cancelled','interrupted'].includes(result.status))showRecovery(result);
+  return result;
 
  }finally{activeJobId=null;watchedJob=null;setBusy(false);await refreshStatus();if(step===4)renderDiscovery();}
 
@@ -60,7 +61,7 @@ async function job(path,body){
 
  $('recovery-notice').hidden=true;setBusy(true,'Starting…');
 
- try{const {job_id,run_id}=await api(path,body);activeDiscoveryRun=run_id||(path.includes('/discovery/')?project.discovery_view:null);if(run_id){selectedDiscoveryRun=run_id;project=await api('/projects/'+project.id+'/discovery/'+run_id+'/view');groupIndex=variationIndex=0;step=3;syncModePresentation();render();document.querySelectorAll('.screen').forEach(s=>s.hidden=s.id!=='step-3');renderStudio();$('discovery-preview').close();spotlightEpisodeProgress();}await watchJob(job_id);activeDiscoveryRun=null;}
+ try{const {job_id,run_id}=await api(path,body);activeDiscoveryRun=run_id||(path.includes('/discovery/')?project.discovery_view:null);if(run_id){selectedDiscoveryRun=run_id;project=await api('/projects/'+project.id+'/discovery/'+run_id+'/view');groupIndex=variationIndex=0;step=3;syncModePresentation();render();document.querySelectorAll('.screen').forEach(s=>s.hidden=s.id!=='step-3');renderStudio();$('discovery-preview').close();spotlightEpisodeProgress();}const completed=await watchJob(job_id);activeDiscoveryRun=null;return completed;}
 
  catch(e){if(!watchedJob)setBusy(false);await refreshStatus();throw e;}
 
@@ -202,7 +203,7 @@ async function restoreManualProject(){if(!project?.discovery_view)return;const i
 
 async function openDiscoveryRun(rid,index=0){if(busy||!project)return;selectedDiscoveryRun=rid;project=await api('/projects/'+project.id+'/discovery/'+encodeURIComponent(rid)+'/view');groupIndex=index;variationIndex=0;render();go(3);}
 
-function savedOutputControls(){manualSavedOutputControls();renderLiveEpisodeProgress();const discovery=!!project?.discovery_view;for(const id of ['export','handoff-export'])$(id).hidden=discovery;$('export').hidden=false;if(!discovery){text('repair-current','Repair this promo');document.querySelector('.group-picker>span').textContent='Promo';text('export','Download all cuts · PDF');text('adjust-brief','Adjust the brief');text('json-export','Source data');const empty=$('studio-empty');empty.querySelector('h2').textContent='No eligible cuts yet.';empty.querySelector('p').textContent='Choose your episodes and brief to create one draft per promo.';return;}
+function savedOutputControls(){manualSavedOutputControls();renderLiveEpisodeProgress();$('review-many').hidden=!!project?.saved_output_view||!project?.groups?.length;$('review-many').disabled=busy||reviewBatchRunning;const discovery=!!project?.discovery_view;for(const id of ['export','handoff-export'])$(id).hidden=discovery;$('export').hidden=false;if(!discovery){text('repair-current','Repair this promo');document.querySelector('.group-picker>span').textContent='Promo';text('export','Download all cuts · PDF');text('adjust-brief','Adjust the brief');text('json-export','Source data');const empty=$('studio-empty');empty.querySelector('h2').textContent='No eligible cuts yet.';empty.querySelector('p').textContent='Choose your episodes and brief to create one draft per promo.';return;}
 
  const run=discoveryRun()||{},notice=$('saved-output-notice');notice.hidden=false;notice.replaceChildren(node('strong',`${runStatus(run)} · ${runCoverageSummary(run)}`),node('p','Discovery output · Your manual drafts are preserved. Saved cuts can be opened without a key. Refinement is not available for discovery cuts.'));
 
@@ -266,7 +267,7 @@ function renderDiscoveryReport(run){const body=$('discovery-report-body');body.r
 
  body.append(node('p','Coverage means these source windows were processed. It does not guarantee every possible promo was found. Unscanned or pending work is not a rejection.','small'));
 
- const actions=node('div',null,'discovery-run-actions'),view=node('button','Open ranked cuts','button secondary');view.disabled=busy||!(run.shortlist?.length);view.onclick=()=>attempt(()=>openDiscoveryRun(run.id));actions.append(view);
+ const actions=node('div',null,'discovery-run-actions');const batchReview=node('button','Review multiple promos','button secondary');batchReview.disabled=busy||reviewBatchRunning||!(run.shortlist?.length);batchReview.onclick=()=>openReviewPicker(run.id);actions.append(batchReview);const view=node('button','Open ranked cuts','button secondary');view.disabled=busy||!(run.shortlist?.length);view.onclick=()=>attempt(()=>openDiscoveryRun(run.id));actions.append(view);
 
  if(!['complete','completed','done','no_qualifying'].includes(run.status)){const resume=node('button','Resume this run','button primary');resume.disabled=busy;resume.onclick=()=>attempt(async()=>{await job('/projects/'+project.id+'/discovery/'+run.id+'/resume',{});});actions.append(resume);}
 
@@ -322,3 +323,11 @@ $('run-virality-review').onclick=()=>attempt(async()=>{const ctx=repairScope(),g
 
 
 $('close-discovery-preview').onclick=()=>$('discovery-preview').close();
+
+let reviewPickerContext=null,reviewBatchRunning=false;
+function reviewPickerSelection(){const boxes=[...$('review-picker-list').querySelectorAll('input')],count=boxes.filter(b=>b.checked).length;$('review-selected').disabled=!count;text('review-selected',`Review ${count||'selected'} promo${count===1?'':'s'}`);$('review-pick-all').checked=!!boxes.length&&count===boxes.length;$('review-pick-all').indeterminate=count>0&&count<boxes.length;}
+function openReviewPicker(runId=null){if(busy||reviewBatchRunning||!project||project.saved_output_view)return;const ctx=repairScope(runId);reviewPickerContext=ctx;clear('review-picker-list');text('review-picker-error','');scopeItems(ctx).filter(row=>row.current).forEach(row=>{const label=node('label',null,'repair-picker-row'),input=document.createElement('input');input.type='checkbox';input.value=row.id;input.onchange=reviewPickerSelection;const copy=node('div'),score=discoveryRating(row.current);copy.append(node('strong',row.title),node('p',`${score===null?'Not rated':score+'/100 · Review again'} · ${row.current.validation?.eligible?'Cut checks passed':'Cut-check warnings'}${row.proposal?' · Repair decision pending':''}`,'small'));label.append(input,copy);$('review-picker-list').append(label);});reviewPickerSelection();$('review-picker').showModal();}
+$('review-many').onclick=()=>openReviewPicker();
+$('review-picker-close').onclick=()=>$('review-picker').close();
+$('review-pick-all').onchange=e=>{$('review-picker-list').querySelectorAll('input').forEach(input=>input.checked=e.target.checked);reviewPickerSelection();};
+$('review-selected').onclick=()=>attempt(async()=>{const ctx=reviewPickerContext,ids=[...$('review-picker-list').querySelectorAll('input:checked')].map(input=>input.value);if(!ctx||!ids.length||reviewBatchRunning)return;$('review-picker').close();reviewBatchRunning=true;$('review-batch-notice').hidden=false;let done=0;try{for(const id of ids){if(project?.id!==ctx.pid)break;text('review-batch-notice',`Reviewing promo ${done+1} of ${ids.length} · Completed scores are saved individually.`);const result=await job('/projects/'+ctx.pid+(ctx.rid?'/discovery/'+ctx.rid+'/episodes/'+encodeURIComponent(id)+'/virality-review':'/virality-review'),ctx.rid?{}:{variation_id:id});if(result?.status!=='done')break;done++;} }finally{reviewBatchRunning=false;await refreshRepairProject(ctx);text('review-batch-notice',`${done} of ${ids.length} selected reviews completed. Saved scores are preserved.`);}});

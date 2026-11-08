@@ -107,3 +107,8 @@ The project was developed iteratively with AI coding assistance: small scoped ch
 No uploaded screenplays, saved projects, API keys, private run logs or saved outputs are distributed. Runtime data stays local. Keep the bundled font licenses when redistributing PDF functionality. See SECURITY.md, requirements files, tests and docs for implementation details.
 
 See [the updated solution document](docs/SOLUTION.md) for the problem-to-solution walkthrough.
+
+
+## Select multiple promos for Virality Review
+
+In either workflow, click **Review multiple promos**, select drafts or **Select all**, and run the reviews. The picker shows current scores and warnings. Failed cuts can be reviewed. It assesses the chosen current draft, not an unaccepted repair proposal. Each promo uses its own request, processed sequentially; each completed score is saved before continuing. Stop, provider error or quota exhaustion ends the remaining queue without deleting completed scores. Refresh ends unstarted selections in this browser queue; choose the unfinished promos again to continue. Existing individual review buttons remain available.

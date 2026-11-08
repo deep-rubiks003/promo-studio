@@ -45,3 +45,8 @@ The build followed an iterative AI-assisted workflow: inspect the current behavi
 ## Scope and next steps
 
 This local prototype meets the cut-discovery and editor-handoff workflow. Production use would benefit from authentication, storage isolation, model-version evaluation and real editor feedback against posting outcomes. It currently does not render video or guarantee that model suggestions are compelling. Human judgment remains the final publishing decision.
+
+
+## Select multiple promos for Virality Review
+
+In either workflow, click **Review multiple promos**, select drafts or **Select all**, and run the reviews. The picker shows current scores and warnings. Failed cuts can be reviewed. It assesses the chosen current draft, not an unaccepted repair proposal. Each promo uses its own request, processed sequentially; each completed score is saved before continuing. Stop, provider error or quota exhaustion ends the remaining queue without deleting completed scores. Refresh ends unstarted selections in this browser queue; choose the unfinished promos again to continue. Existing individual review buttons remain available.
