@@ -188,11 +188,13 @@ Original source text, timestamps, speakers, kinds and IDs were retained. These f
 
 ```powershell
 # Windows
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
 ```bash
 # macOS / Linux
+.venv/bin/python -m pip install -r requirements-dev.txt
 .venv/bin/python -m pytest -q
 ```
 

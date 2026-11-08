@@ -66,6 +66,7 @@ Use Stop generation to cancel a job. Saved completed work is retained. If the se
 ## Run tests safely
 
 ```bash
+python -m pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 

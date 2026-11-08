@@ -39,7 +39,7 @@ There is no completed all-50-episode live quality benchmark claimed by this repo
 
 ## Offline verification
 
-The source installation's current suite contains 110 tests. The packaged repository reruns those tests after removing a laptop-specific test import. They cover parsing, source scope, preservation of payload content, grouping, model response normalization, explicit review, spoiler batching, discovery coverage on 50/100 synthetic episodes, request bounds, storage, cancellation, recovery and exports.
+The source installation's current suite contains 110 tests. The packaged repository adds a regression for a cancellation/pipe-reset race found during Linux CI, giving 111 tests when development dependencies are installed. A laptop-specific test import was also made portable. They cover parsing, source scope, preservation of payload content, grouping, model response normalization, explicit review, spoiler batching, discovery coverage on 50/100 synthetic episodes, request bounds, storage, cancellation, recovery and exports. `requirements-dev.txt` includes the PDF inspection dependency so those tests do not silently skip in CI.
 
 Provider responses in tests are mocked or synthetic. No live Gemini key is needed. Passing tests demonstrate application contracts, not that a real model follows its prompts or that an editor agrees with its scores.
 
