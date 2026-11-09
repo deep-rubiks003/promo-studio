@@ -1,5 +1,9 @@
 # Promo Studio
 
+**Live app: [Open Promo Studio on Netlify](https://calm-gecko-09ef1d.netlify.app/)**
+
+Try the hosted app above, or follow the local setup instructions below.
+
 Turn timestamped screenplay episodes into source-backed promo cut sheets, with an editor in control.
 
 **Repository:** https://github.com/deep-rubiks003/promo-studio
